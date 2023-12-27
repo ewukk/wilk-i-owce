@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gra</title>
+    <style>
+        /* Stylizacja szachownicy */
+        .board {
+            display: grid;
+            grid-template-columns: repeat(8, 50px); /* Odpowiada szerokości komórki planszy w pikselach */
+            grid-template-rows: repeat(8, 50px); /* Odpowiada wysokości komórki planszy w pikselach */
+        }
+
+        .cell {
+            width: 50px; /* Szerokość komórki planszy w pikselach */
+            height: 50px; /* Wysokość komórki planszy w pikselach */
+            border: 1px solid black;
+            position: relative; /* Dodaj pozycję względną, aby pionki były pozycjonowane wewnątrz komórki */
+        }
+
+        .white {
+            background-color: white;
+        }
+
+        .black {
+            background-color: #d3d3d3; /* Kolor dla czarnych pól */
+        }
+
+        .sheep {
+            position: absolute;
+            width: 40px; /* Szerokość pionka owcy */
+            height: 40px; /* Wysokość pionka owcy */
+            background-color: white;
+            border-radius: 50%;
+            /* Ustaw pozycję pionka w środku komórki */
+            left: 5px; /* Odstęp od lewej krawędzi komórki */
+            top: 5px; /* Odstęp od górnej krawędzi komórki */
+        }
+
+        .wolf {
+            position: absolute;
+            width: 40px; /* Szerokość pionka wilka */
+            height: 40px; /* Wysokość pionka wilka */
+            background-color: gray;
+            border-radius: 50%;
+            left: 5px; /* Odstęp od lewej krawędzi komórki */
+            top: 5px; /* Odstęp od górnej krawędzi komórki */
+        }
+    </style>
+</head>
+<body>
+    <h1>Grajmy!</h1>
+    <div class="board">
+        {% for row in range(8) %}
+            {% for col in range(8) %}
+                <div class="cell {% if (row + col) % 2 == 0 %}white{% else %}black{% endif %}">
+                    {% if row == 0 and col == 0 %}
+                        <!-- Pionka wilka -->
+                        <div class="wolf"></div>
+                    {% elif row == 7 %}
+                        <!-- Pionki owiec -->
+                        <div class="sheep"></div>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        {% endfor %}
+    </div>
+</body>
+</html>

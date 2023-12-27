@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Figury</title>
+</head>
+<body>
+     <form method="post" action="{{ url_for('choose_figure') }}">
+        <label for="figure">Wybierz rolę:</label>
+        <select name="figure" id="figure">
+            <option value="owca">Owca</option>
+            <option value="wilk">Wilk</option>
+        </select>
+        <input type="submit" value="Rozpocznij grę">
+    </form>
+</body>
+</html>
