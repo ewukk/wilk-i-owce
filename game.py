@@ -17,7 +17,7 @@ class Game:
 
         self.player = self.create_player(session.get('player_role', 'owca'))
         self.wolf = Wolf(350, 50)
-        self.sheep = [Sheep(50 * i, 350) for i in range(8)]
+        self.sheep = [Sheep(50 * i, 350) for i in range(4)]
 
     def create_player(self, role):
         if role == 'owca':

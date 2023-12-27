@@ -31,7 +31,7 @@
             position: absolute;
             width: 40px; /* Szerokość pionka owcy */
             height: 40px; /* Wysokość pionka owcy */
-            background-color: white;
+            background-color: #a3c8eb;
             border-radius: 50%;
             /* Ustaw pozycję pionka w środku komórki */
             left: 5px; /* Odstęp od lewej krawędzi komórki */
@@ -47,6 +47,14 @@
             left: 5px; /* Odstęp od lewej krawędzi komórki */
             top: 5px; /* Odstęp od górnej krawędzi komórki */
         }
+
+        .piece {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+        }/* Kursor wskazujący, aby wskazywać, że element jest ruchomy */
     </style>
 </head>
 <body>
@@ -57,14 +65,32 @@
                 <div class="cell {% if (row + col) % 2 == 0 %}white{% else %}black{% endif %}">
                     {% if row == 0 and col == 0 %}
                         <!-- Pionka wilka -->
-                        <div class="wolf"></div>
-                    {% elif row == 7 %}
+                        <div class="piece wolf" id="wolf"></div>
+                    {% elif row == 7 and col % 2 == 0 %}
                         <!-- Pionki owiec -->
-                        <div class="sheep"></div>
+                        <div class="piece sheep" id="sheep{{ i }}"></div>
                     {% endif %}
                 </div>
             {% endfor %}
         {% endfor %}
     </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+    <script>
+        // Obsługa przesuwania pionka wilka
+        $("#wolf").draggable({
+            containment: ".board", // nie opuści planszy
+            grid: [50, 50], // przesuwanie o pełne komórki
+        });
+
+        // Obsługa przesuwania pionków owiec
+            $(".sheep").draggable({
+                containment: ".board",
+                grid: [50, 50],
+            });
+
+    </script>
+
 </body>
 </html>
