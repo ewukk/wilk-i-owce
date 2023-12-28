@@ -1,20 +1,30 @@
 class Player:
     def __init__(self):
         self.role = None
+        self.position = None
 
     def make_move(self):
-        # Ta metoda powinna zwrócić ruch gracza
-        raise NotImplementedError("make_move method must be implemented in derived classes")
+        if self.position is not None:
+            return f"Aktualna pozycja gracza {self.role}: {self.position}"
+        else:
+            return f"{self.role} nie ma jeszcze ustawionej pozycji."
+
+    def set_move(self, new_position=None):
+        if new_position is not None:
+            self.position = new_position
 
 
 class SheepPlayer(Player):
-    def make_move(self):
-        direction_x = int(input("Podaj kierunek ruchu owiec w osi x (-1, 0, 1): "))
-        return direction_x, 0  # Owce poruszają się tylko w osi x
+    def get_wolf_position(self):
+        return self.get_wolf().get_position()
+
+    def get_sheep_positions(self):
+        return [sheep.get_position() for sheep in self.get_sheep()]
 
 
 class WolfPlayer(Player):
-    def make_move(self):
-        direction_x = int(input("Podaj kierunek ruchu wilka w osi x (-1, 0, 1): "))
-        direction_y = int(input("Podaj kierunek ruchu wilka w osi y (-1, 0, 1): "))
-        return direction_x, direction_y
+    def get_wolf_position(self):
+        return self.get_wolf().get_position()
+
+    def get_sheep_positions(self):
+        return [sheep.get_position() for sheep in self.get_sheep()]

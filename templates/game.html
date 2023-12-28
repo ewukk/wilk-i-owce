@@ -58,28 +58,94 @@
 
         }
     </style>
+
+    <script>
+        // Store initial positions of sheeps
+        const initialSheepPositions = {{ sheep_positions | tojson | safe }};
+    </script>
+
 </head>
 <body>
+    {% set sheep_positions = [] %}
+    {% for sheep in sheeps %}
+        {% set sheep_positions = sheep_positions + [sheep.get_position()] %}
+    {% endfor %}
+
+    {% block content %}
+
     <h1>Grajmy!</h1>
+    <p>{{ result }}</p>
+
     <div class="board">
         {% for row in range(8) %}
             {% for col in range(8) %}
                 <div class="cell {% if (row + col) % 2 == 0 %}white{% else %}black{% endif %}">
                     {% if row == 0 and col == 0 %}
                         <!-- Pionka wilka -->
-                        <div class="piece wolf" id="wolf" style="cursor: pointer;"></div>
+                        <div class="piece wolf" id="wolf" style="cursor: pointer;" data-initial-position="{{ wolf.get_position() }}"></div>
                     {% elif row == 7 and col % 2 == 0 %}
                         <!-- Pionki owiec -->
-                        <div class="piece sheep" id="sheep{{ i }}" style="cursor: pointer;"></div>
+                        <div class="piece sheep" id="sheep{{ loop.index0 }}" data-piece-type="sheep" style="cursor: pointer;" data-initial-row="{{ loop.index0 }}" data-initial-col="0"></div>
                     {% endif %}
                 </div>
             {% endfor %}
         {% endfor %}
     </div>
 
+    {% endblock content %}
+
+    <form method="post" action="/game">
+        <input type="hidden" id="move" name="move" value="">
+        <input type="submit" value="Wykonaj ruch" onclick="executeMove()">
+    </form>
+
     <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
     <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+
     <script>
+
+        $(document).ready(function() {
+
+        var currentPlayerRole = "{{ session.get('player_role') }}";
+
+    $(".piece").draggable({
+        disabled: true
+    });
+
+    function setCurrentPlayerRole(role) {
+        currentPlayerRole = role;
+        // Dodaj odpowiednią logikę dla zmiany roli
+        if (currentPlayerRole === "wilk") {
+            $("#wolf").draggable("option", "disabled", false);
+            $("[data-piece-type='sheep']").draggable("option", "disabled", true);
+        } else if (currentPlayerRole === "owca") {
+            $("#wolf").draggable("option", "disabled", true);
+            $("[data-piece-type='sheep']").draggable("option", "disabled", false);
+        }
+    }
+
+            function executeMove() {
+    var currentPosition;
+    var pieceId;
+
+    if ($("#wolf").length && currentPlayerRole === "wilk") {
+        currentPosition = {
+            row: Math.floor($("#wolf").position().top / 50),
+            col: Math.floor($("#wolf").position().left / 50)
+        };
+        pieceId = "wolf";
+    } else if ($(".piece.sheep").length && currentPlayerRole === "owca") {
+        currentPosition = {
+            row: Math.floor($(".piece.sheep").position().top / 50),
+            col: Math.floor($(".piece.sheep").position().left / 50)
+        };
+        pieceId = $(".piece.sheep").attr("id");
+    } else {
+        // Gracz nie ma prawa poruszać pionkiem obcej roli
+        return;
+    }}
+
+
 
       function isDiagonalMovement(startPosition, endPosition) {
             const dx = Math.abs(endPosition.left - startPosition.left);
@@ -87,52 +153,74 @@
             return dx === dy;
       }
 
-      // Obsługa przesuwania pionka wilka
-      $("#wolf").draggable({
-          containment: ".board",
-          grid: [50, 50],
-          drag: function (event, ui) {
-              const startPosition = ui.originalPosition;
-              const endPosition = ui.position;
+if (currentPlayerRole === "wilk") {
+        $("#wolf").draggable({
+            containment: ".board",
+            grid: [50, 50],
+            disabled: false,
+            drag: function (event, ui) {
+                const startPosition = ui.originalPosition;
+                const endPosition = ui.helper.position();
 
-              // Sprawdzenie, czy ruch jest na ukos
-              if (!isDiagonalMovement(startPosition, endPosition)) {
-                  // Jeśli nie, przywróć poprzednią pozycję
-                  $(this).draggable('option', 'revert', true);
-              } else {
-                  // W przeciwnym razie, usuń opcję revert
-                  $(this).draggable('option', 'revert', false);
-              }
-          }
-      });
+                // Sprawdzenie, czy ruch jest na ukos
+                if (!isDiagonalMovement(startPosition, endPosition)) {
+                    // Jeśli nie, przywróć poprzednią pozycję
+                    $(this).draggable('option', 'revert', true);
+                } else {
+                    // W przeciwnym razie, usuń opcję revert
+                    $(this).draggable('option', 'revert', false);
+                    executeMove();
+                }
+            }
+        });
 
-      // Obsługa przesuwania pionków owiec
-      $(".sheep").draggable({
-          containment: ".board",
-          grid: [50, 50],
-          drag: function (event, ui) {
-              const startPosition = ui.originalPosition;
-              const endPosition = ui.position;
+        $(".sheep").draggable({
+            disabled: true
+        });
+    } else if (currentPlayerRole === "owca") {
+        $(".sheep").draggable({
+            containment: ".board",
+            grid: [50, 50],
+            disabled: false,
+            drag: function (event, ui) {
+                const startPosition = ui.originalPosition;
+                const endPosition = ui.helper.position();
 
-              // Sprawdzenie, czy ruch jest na ukos
-              if (!isDiagonalMovement(startPosition, endPosition)) {
-                  // Jeśli nie, przywróć poprzednią pozycję
-                  $(this).draggable('option', 'revert', true);
-              } else {
-                  // Sprawdzenie, czy pionek nie cofa się do poprzedniego rzędu
-                  const startRow = Math.floor(startPosition.top / 50);
-                  const endRow = Math.floor(endPosition.top / 50);
-                  if (endRow > startRow) {
-                      // Jeśli pionek cofa się do poprzedniego rzędu, przywróć poprzednią pozycję
-                      $(this).draggable('option', 'revert', true);
-                  } else {
-                      // W przeciwnym razie, usuń opcję revert
-                      $(this).draggable('option', 'revert', false);
-                  }
-              }
+                // Sprawdzenie, czy ruch jest na ukos
+                if (!isDiagonalMovement(startPosition, endPosition)) {
+                    // Jeśli nie, przywróć poprzednią pozycję
+                    $(this).draggable('option', 'revert', true);
+                } else {
+                    // Dodaj logikę poruszania się owcy
+                    // ...
+                    // Sprawdzenie, czy pionek nie cofa się do poprzedniego rzędu
+                    const startRow = Math.floor(startPosition.top / 50);
+                    const endRow = Math.floor(endPosition.top / 50);
+                    if (endRow > startRow) {
+                        // Jeśli pionek cofa się do poprzedniego rzędu, przywróć poprzednią pozycję
+                        $(this).draggable('option', 'revert', true);
+                    } else {
+                        // W przeciwnym razie, usuń opcję revert
+                        $(this).draggable('option', 'revert', false);
+                        executeMove();
+                    }
+                }
+            }
+        });
 
-          },
-      });
+        $("#wolf").draggable({
+            disabled: true
+        });
+    }
+
+            setCurrentPlayerRole(currentPlayerRole);
+
+            var lastMove = "{{ session.get('last_move') }}";
+            if (lastMove) {
+                $("#move").val(lastMove);
+            }
+
+    });
 
     </script>
 </body>

@@ -8,6 +8,9 @@ from Players.Player import Player
 
 app = Flask(__name__)
 app.secret_key = 'secret_key'
+player = Player()
+computer_player = ComputerPlayer()
+game_instance = Game(player, computer_player, player_role=None)
 
 
 @app.route('/')
@@ -17,22 +20,38 @@ def hello():
 
 @app.route('/choose_figure', methods=['GET', 'POST'])
 def choose_figure():
+    global game_instance
     if request.method == 'POST':
         session['player_role'] = request.form['figure']
         session['computer_role'] = "owca" if session['player_role'] == "wilk" else "wilk"
+        game_instance.set_player_role(session.get('player_role', 'owca'))  # Ustaw rolę w instancji Game
         return redirect('/game')
     return render_template('choose_figure.html', player_role=session.get('player_role'))
 
 
-@app.route('/game')
+@app.route('/game', methods=['GET', 'POST'])
 def game():
-    sheeps = [Sheep(50 * i, 350) for i in range(8)]
-    wolf = Wolf(350, 50)
-    return render_template('game.html', sheeps=sheeps, wolf=wolf)
+    global game_instance
+    result = ""
+
+    if request.method == 'POST':
+        user_move = request.form['move']
+        result = game_instance.play_turn(user_move)
+        session['last_move'] = user_move
+
+        if game_instance.is_game_over():
+            pass
+
+    computer_move = game_instance.get_computer_move()
+    result += game_instance.play_turn(computer_move)
+
+    sheeps = game_instance.get_sheep()
+    wolf = game_instance.get_wolf()
+    sheep_positions = [sheep.get_position() for sheep in sheeps]
+    initialSheepPositions = [sheep.get_position() for sheep in sheeps]
+
+    return render_template('game.html', sheeps=sheeps, wolf=wolf, result=result, sheep_positions=sheep_positions, initialSheepPositions=initialSheepPositions)
 
 
 if __name__ == '__main__':
-    player = Player()
-    computer_player = ComputerPlayer()
-    game_instance = Game(player, computer_player)
     app.run()
