@@ -36,6 +36,7 @@
             /* Ustaw pozycję pionka w środku komórki */
             left: 5px; /* Odstęp od lewej krawędzi komórki */
             top: 5px; /* Odstęp od górnej krawędzi komórki */
+            z-index: 1;
         }
 
         .wolf {
@@ -46,6 +47,7 @@
             border-radius: 50%;
             left: 5px; /* Odstęp od lewej krawędzi komórki */
             top: 5px; /* Odstęp od górnej krawędzi komórki */
+            z-index: 1; /* Ustawienie pionka wilka na pierwszym planie */
         }
 
         .piece {
@@ -53,8 +55,8 @@
             width: 40px;
             height: 40px;
             border-radius: 50%;
-            cursor: pointer;
-        }/* Kursor wskazujący, aby wskazywać, że element jest ruchomy */
+
+        }
     </style>
 </head>
 <body>
@@ -65,10 +67,10 @@
                 <div class="cell {% if (row + col) % 2 == 0 %}white{% else %}black{% endif %}">
                     {% if row == 0 and col == 0 %}
                         <!-- Pionka wilka -->
-                        <div class="piece wolf" id="wolf"></div>
+                        <div class="piece wolf" id="wolf" style="cursor: pointer;"></div>
                     {% elif row == 7 and col % 2 == 0 %}
                         <!-- Pionki owiec -->
-                        <div class="piece sheep" id="sheep{{ i }}"></div>
+                        <div class="piece sheep" id="sheep{{ i }}" style="cursor: pointer;"></div>
                     {% endif %}
                 </div>
             {% endfor %}
@@ -78,19 +80,60 @@
     <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
     <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
     <script>
-        // Obsługa przesuwania pionka wilka
-        $("#wolf").draggable({
-            containment: ".board", // nie opuści planszy
-            grid: [50, 50], // przesuwanie o pełne komórki
-        });
 
-        // Obsługa przesuwania pionków owiec
-            $(".sheep").draggable({
-                containment: ".board",
-                grid: [50, 50],
-            });
+      function isDiagonalMovement(startPosition, endPosition) {
+            const dx = Math.abs(endPosition.left - startPosition.left);
+            const dy = Math.abs(endPosition.top - startPosition.top);
+            return dx === dy;
+      }
+
+      // Obsługa przesuwania pionka wilka
+      $("#wolf").draggable({
+          containment: ".board",
+          grid: [50, 50],
+          drag: function (event, ui) {
+              const startPosition = ui.originalPosition;
+              const endPosition = ui.position;
+
+              // Sprawdzenie, czy ruch jest na ukos
+              if (!isDiagonalMovement(startPosition, endPosition)) {
+                  // Jeśli nie, przywróć poprzednią pozycję
+                  $(this).draggable('option', 'revert', true);
+              } else {
+                  // W przeciwnym razie, usuń opcję revert
+                  $(this).draggable('option', 'revert', false);
+              }
+          }
+      });
+
+      // Obsługa przesuwania pionków owiec
+      $(".sheep").draggable({
+          containment: ".board",
+          grid: [50, 50],
+          drag: function (event, ui) {
+              const startPosition = ui.originalPosition;
+              const endPosition = ui.position;
+
+              // Sprawdzenie, czy ruch jest na ukos
+              if (!isDiagonalMovement(startPosition, endPosition)) {
+                  // Jeśli nie, przywróć poprzednią pozycję
+                  $(this).draggable('option', 'revert', true);
+              } else {
+                  // Sprawdzenie, czy pionek nie cofa się do poprzedniego rzędu
+                  const startRow = Math.floor(startPosition.top / 50);
+                  const endRow = Math.floor(endPosition.top / 50);
+                  if (endRow > startRow) {
+                      // Jeśli pionek cofa się do poprzedniego rzędu, przywróć poprzednią pozycję
+                      $(this).draggable('option', 'revert', true);
+                  } else {
+                      // W przeciwnym razie, usuń opcję revert
+                      $(this).draggable('option', 'revert', false);
+                  }
+              }
+
+          },
+      });
 
     </script>
-
 </body>
 </html>
