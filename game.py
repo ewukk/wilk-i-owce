@@ -4,20 +4,32 @@ from Players.ComputerPlayer import ComputerPlayer
 from Figures.Sheep import Sheep
 from Figures.Wolf import Wolf
 
-app = Flask(__name__)
+
+def create_game_instance():
+    player = Player()
+    computer_player = ComputerPlayer()
+    return Game(player, computer_player)
+
+
+def create_player(role):
+    if role is None or role == 'owca':
+        return SheepPlayer()
+    elif role == 'wilk':
+        return WolfPlayer()
+    else:
+        raise ValueError(f"Nieznana rola: {role}")
 
 
 class Game:
-    def __init__(self, player, computer_player, player_role):
-        self.app = app
+    def __init__(self, player, computer_player):
+        # self.app = app  # Ta linia może być problemem, ale zostaw ją na razie
         self.player = player
         self.computer_player = computer_player
         self.players = [self.player, self.computer_player]
         self.current_player = self.player
-        self.init_flask_routes()
         self.last_move = None
-
-        self.player = self.create_player(player_role)
+        self.player_role = None
+        self.move_history = {"owca": [], "wilk": []}
         self.wolf = Wolf(350, 50)
         self.sheep = [Sheep(50 * i, 350) for i in range(4)]
 
@@ -29,26 +41,12 @@ class Game:
 
     def set_player_role(self, role):
         self.player_role = role
-        self.player = self.create_player(role)
-
-    def create_player(self, role):
-        if role is None or role == 'owca':
-            return SheepPlayer()
-        elif role == 'wilk':
-            return WolfPlayer()
-        else:
-            raise ValueError(f"Nieznana rola: {role}")
+        self.player = create_player(role)
 
     def switch_player(self):
         self.current_player = (
             self.player if self.current_player == self.computer_player else self.computer_player
         )
-
-    def init_flask_routes(self):
-        @self.app.route('/game')
-        def play_turn():
-            result = self.play_turn()
-            return result
 
     def play_turn(self, user_move=None):
         # Get the move from the current player
@@ -68,13 +66,22 @@ class Game:
             move_result = self.current_player.make_move()
             result += f"\n{self.current_player.role} wykonuje ruch: {move_result}"
 
-        # Przechowaj ostatni ruch
-        session['last_move'] = move
+        # Sprawdź, czy player_role jest ustawiona
+        if self.player_role is not None:
+            self.move_history[self.player_role].append({"player": self.player_role, "move": move})
+            session['last_move'] = move
+        else:
+            print("Błąd: player_role nie jest ustawiona")
 
         # Przełącz na kolejnego gracza
         self.switch_player()
 
         return result
+
+    def get_move_history(self):
+        # Ustaw domyślną rolę, jeśli player_role nie jest ustawiona
+        player_role = self.current_player.role if self.current_player.role is not None else 'owca'
+        return self.move_history.get(player_role, [])
 
     def get_computer_move(self):
         if isinstance(self.current_player, ComputerPlayer):
@@ -110,10 +117,6 @@ class Game:
             sheep.get_position() == (x - 1, y) or sheep.get_position() == (x + 1, y)
             for sheep in self.sheep)
 
+    # def init_flask_routes(self):
 
-if __name__ == "__main__":
-    player = Player()
-    computer_player = ComputerPlayer()
-    player_role = session.get('player_role', 'owca')
-    app_instance = Game(player, computer_player)
-    app_instance.app.run(debug=True)
+

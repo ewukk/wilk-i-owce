@@ -5,13 +5,26 @@
     <title>Figury</title>
 </head>
 <body>
-     <form method="post" action="{{ url_for('choose_figure') }}">
-        <label for="figure">Wybierz rolę:</label>
-        <select name="figure" id="figure">
-            <option value="owca">Owca</option>
-            <option value="wilk">Wilk</option>
-        </select>
-        <input type="submit" value="Rozpocznij grę">
+    <button onclick="selectRole('owca')">Wybierz Owca</button>
+    <button onclick="selectRole('wilk')">Wybierz Wilk</button>
+
+    <script>
+        function selectRole(role) {
+            // Tutaj możesz dodać dodatkową logikę, jeśli jest taka potrzeba
+            // Na przykład, przekazanie wybranej roli do formularza lub innej funkcji obsługującej wybór roli
+            console.log('Wybrano rolę:', role);
+
+            // Jeśli chcesz przekazać rolę do formularza, możesz użyć np. ukrytego pola
+            document.getElementById('selectedRole').value = role;
+
+            // Następnie można przesłać formularz
+            document.getElementById('roleForm').submit();
+        }
+    </script>
+
+    <!-- Dodaj formularz z ukrytym polem do przekazania roli -->
+    <form id="roleForm" method="post" action="{{ url_for('choose_figure') }}">
+        <input type="hidden" name="figure" id="selectedRole" value="">
     </form>
 </body>
 </html>

@@ -72,28 +72,36 @@
         {% set sheep_positions = sheep_positions + [sheep.get_position()] %}
     {% endfor %}
 
+    {% set initial_wolf_row = 0 %}
+    {% set initial_wolf_col = 0 %}
+    {% set wolf_position = [initial_wolf_row, initial_wolf_col] %}
+
     {% block content %}
 
     <h1>Grajmy!</h1>
     <p>{{ result }}</p>
 
     <div class="board">
-        {% for row in range(8) %}
-            {% for col in range(8) %}
-                <div class="cell {% if (row + col) % 2 == 0 %}white{% else %}black{% endif %}">
-                    {% if row == 0 and col == 0 %}
-                        <!-- Pionka wilka -->
-                        <div class="piece wolf" id="wolf" style="cursor: pointer;" data-initial-position="{{ wolf.get_position() }}"></div>
-                    {% elif row == 7 and col % 2 == 0 %}
+    {% for row in range(8) %}
+        {% for col in range(8) %}
+            <div class="cell {% if (row + col) % 2 == 0 %}white{% else %}black{% endif %}">
+                {% if row == wolf_position[0] and col == wolf_position[1] %}
+                    <!-- Pionek wilka -->
+                    <div class="piece wolf" id="wolf" style="cursor: pointer;" data-initial-position="{{ wolf.get_position() }}"></div>
+                {% endif %}
+                {% for move in move_history["owca"] %}
+                    {% if row == 7 and col % 2 == 0 %}
                         <!-- Pionki owiec -->
                         <div class="piece sheep" id="sheep{{ loop.index0 }}" data-piece-type="sheep" style="cursor: pointer;"
                             data-initial-row="{{ loop.index0 }}" data-initial-col="0"
                             data-current-row="{{ loop.index0 }}" data-current-col="0"></div>
                     {% endif %}
-                </div>
-            {% endfor %}
+                {% endfor %}
+            </div>
         {% endfor %}
-    </div>
+    {% endfor %}
+</div>
+
 
     {% endblock content %}
 
