@@ -171,8 +171,18 @@
                     grid: [50, 50],
                     disabled: false,
                     drag: function (event, ui) {
-                        handlePieceDrag(event, ui, moveWolfPiece);
-                    }
+                      const startPosition = ui.originalPosition;
+                      const endPosition = ui.position;
+
+                      // Sprawdzenie, czy ruch jest na ukos
+                      if (!isDiagonalMovement(startPosition, endPosition)) {
+                          // Jeśli nie, przywróć poprzednią pozycję
+                          $(this).draggable('option', 'revert', true);
+                      } else {
+                          // W przeciwnym razie, usuń opcję revert
+                          $(this).draggable('option', 'revert', false);
+                      }
+                  }
                 });
             } else if (currentPlayerRole === "owca") {
                 $(".sheep").draggable({
@@ -180,8 +190,27 @@
                     grid: [50, 50],
                     disabled: false,
                     drag: function (event, ui) {
-                        handlePieceDrag(event, ui, moveSheepPiece);
-                    }
+                      const startPosition = ui.originalPosition;
+                      const endPosition = ui.position;
+
+                      // Sprawdzenie, czy ruch jest na ukos
+                      if (!isDiagonalMovement(startPosition, endPosition)) {
+                          // Jeśli nie, przywróć poprzednią pozycję
+                          $(this).draggable('option', 'revert', true);
+                      } else {
+                          // Sprawdzenie, czy pionek nie cofa się do poprzedniego rzędu
+                          const startRow = Math.floor(startPosition.top / 50);
+                          const endRow = Math.floor(endPosition.top / 50);
+                          if (endRow > startRow) {
+                              // Jeśli pionek cofa się do poprzedniego rzędu, przywróć poprzednią pozycję
+                              $(this).draggable('option', 'revert', true);
+                          } else {
+                              // W przeciwnym razie, usuń opcję revert
+                              $(this).draggable('option', 'revert', false);
+                          }
+                      }
+
+                  },
                 });
             }
         }
@@ -201,17 +230,17 @@
             updatePieceView(sheepPiece, currentPosition);
         }
 
-    function updatePieceView(piece, currentPosition) {
-        // Zaktualizuj widok dla danego pionka
-        piece.css({
-            top: currentPosition.row * 50,
-            left: currentPosition.col * 50
-        });
-    }
+        function updatePieceView(piece, currentPosition) {
+            // Zaktualizuj widok dla danego pionka
+            piece.css({
+                top: currentPosition.row * 50,
+                left: currentPosition.col * 50
+            });
+        }
 
-    $(document).ready(function() {
-        setDraggableProperties();
-    });
+        $(document).ready(function() {
+            setDraggableProperties();
+        });
 
     </script>
 </body>
