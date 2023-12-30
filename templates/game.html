@@ -73,8 +73,16 @@
 
     {% block content %}
 
-    <h1>Grajmy!</h1>
     <p>{{ result }}</p>
+    <p>{{ computer_result }}</p>
+
+
+    <h1>Grajmy!</h1>
+
+        {% if not is_game_over %}
+          <p>Gra trwa.</p>
+        {% endif %}
+
 
     <div class="board">
         {% for row in range(8) %}
@@ -82,33 +90,74 @@
                 <div class="cell {% if (row + col) % 2 == 0 %}white{% else %}black{% endif %}">
                     {% if row == wolf_position[0] and col == wolf_position[1] %}
                         <!-- Pionek wilka -->
-                        <div class="piece wolf" id="wolf" style="cursor: pointer;" data-initial-position="{{ wolf.get_position() }}"></div>
+                        <div class="piece wolf" id="wolf" style="cursor: pointer;" data-initial-position="{{ wolf.get_position() }}" data-current-row="{{ wolf_position[0] }}" data-current-col="{{ wolf_position[1] }}"
+                        onstop="handlePieceStop(event, ui, 'wolf')">
+                        </div>
                     {% endif %}
                     {% if row == 7 and col % 2 == 0 %}
                         {% set sheep_index = col // 2 %}
                         <!-- Pionki owiec tylko co drugą komórkę w ostatnim rzędzie -->
-                        <div class="piece sheep" data-piece-type="sheep" style="cursor: pointer;"
+                        <div class="piece sheep" id="sheep{{ sheep_index }}" data-piece-type="sheep" style="cursor: pointer;"
                             data-initial-row="{{ initialSheepPositions[sheep_index][0] }}" data-initial-col="{{ initialSheepPositions[sheep_index][1] }}"
-                            data-current-row="{{ initialSheepPositions[sheep_index][0] }}" data-current-col="{{ initialSheepPositions[sheep_index][1] }}"></div>
+                            data-current-row="{{ initialSheepPositions[sheep_index][0] }}" data-current-col="{{ initialSheepPositions[sheep_index][1] }}"
+                            onstop="handlePieceStop(event, ui, 'sheep{{ sheep_index }}')">
+                        </div>
                     {% endif %}
                 </div>
             {% endfor %}
         {% endfor %}
     </div>
 
-    {% endblock content %}
+        <form id="gameForm" action="/game" method="POST">
+            <input type="hidden" id="moveData" name="move" value="">
+        </form>
 
-    <!--<form id="FormId" method="post" action="/game">
-        <input type="hidden" id="move" name="move" value="">
-        <input type="submit" value="Wykonaj ruch" onclick="executeMove()">
-    </form> -->
+
+
+    {% endblock content %}
 
     <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
     <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
 
+
     <script>
 
         var currentPlayerRole = "{{ session.get('player_role') }}";
+        console.log('Current Player Role:', currentPlayerRole);
+
+        async function executeMove(pieceId, currentPosition) {
+            console.log('Executing move for pieceId:', pieceId, 'at position:', currentPosition);
+
+            var userMove = {
+                pieceId: pieceId,
+                position: currentPosition
+            };
+
+            try {
+                const response = await fetch('/game', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ move: userMove }),
+                    credentials: 'same-origin',
+                });
+
+                // Sprawdź, czy odpowiedź zawiera błąd
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+
+                // Tutaj można dodać dodatkową logikę w przypadku udanej odpowiedzi
+
+            } catch (error) {
+                console.error('Error during fetch:', error);
+            }
+        }
+
+
+
+
 
          function isDiagonalMovement(startPosition, endPosition) {
             const dx = Math.abs(endPosition.left - startPosition.left);
@@ -116,41 +165,9 @@
             return dx === dy;
          }
 
-         function executeMove() {
-            var currentPosition;
-            var pieceId;
-
-            // Sprawdź, czy użytkownik już wykonał ruch w tej turze
-            if ($("#move").val()) {
-                alert("Możesz wykonać tylko jeden ruch w swojej turze.");
-                return;
-            }
-
-            if (currentPlayerRole === "wilk") {
-                // ... (pozostała część kodu)
-            } else if (currentPlayerRole === "owca") {
-                const sheepPiece = $(".sheep.ui-draggable-dragging");
-                if (sheepPiece.length === 0) return;  // Sprawdź, czy pionek owcy jest przesuwany
-
-                currentPosition = {
-                    row: Math.floor(sheepPiece.position().top / 50),
-                    col: Math.floor(sheepPiece.position().left / 50)
-                };
-                pieceId = sheepPiece.attr("id");
-            } else {
-                // Gracz nie ma prawa poruszać pionkiem obcej roli
-                return;
-            }
-
-            // Przypisz aktualną pozycję do formularza
-            $("#move").val(JSON.stringify({ pieceId: pieceId, position: currentPosition }));
-
-            // Wyłącz możliwość przemieszczania pionków po wykonaniu ruchu
-            $(".piece").draggable("disable");
-        }
 
          function handlePieceDrag(event, ui, movePieceFunction) {
-            const startPosition = ui.position;
+            const startPosition = ui.originalPosition;
             const endPosition = ui.helper.position();
 
             // Sprawdzenie, czy ruch jest na ukos
@@ -166,12 +183,59 @@
             }
         }
 
+        function handlePieceStop(event, ui, pieceId) {
+            const currentPosition = {
+                row: Math.floor(ui.position.top / 50),
+                col: Math.floor(ui.position.left / 50)
+            };
+            // Dodaj sprawdzenie, czy ruch już został zgłoszony
+            if (!ui.helper.data("moveReported")) {
+                ui.helper.data("moveReported", true); // Oznacz ruch jako zgłoszony
+
+                // Przed uruchomieniem funkcji executeMove sprawdź, czy ruch już został zgłoszony
+                executeMove(pieceId, currentPosition);
+            }
+
+        }
+
+        function handlePieceDrop(event, ui, pieceId) {
+            const currentPosition = {
+                row: Math.floor(ui.position.top / 50),
+                col: Math.floor(ui.position.left / 50)
+            };
+
+            executeMove(pieceId, currentPosition);
+        }
+
+
         function setDraggableProperties() {
-            $(".piece").draggable({
-                disabled: true
+            var pieceId = "";
+
+            $(".piece").on("stop", function(event, ui) {
+                // Zmienna pieceId jest dostępna tutaj
+                pieceId = $(this).attr("id");
+
+                // Upewnij się, że pieceId nie jest undefined przed wywołaniem startsWith
+                if (pieceId) {
+                    if (currentPlayerRole === "wilk" && pieceId === "wolf") {
+                        // Wykonaj kod tylko dla wilka
+                        executeMove(pieceId, {
+                            row: Math.floor(ui.position.top / 50),
+                            col: Math.floor(ui.position.left / 50)
+                        });
+                    } else if (currentPlayerRole === "owca" && pieceId.startsWith("sheep")) {
+                        // Wykonaj kod tylko dla owiec
+                        executeMove(pieceId, {
+                            row: Math.floor(ui.position.top / 50),
+                            col: Math.floor(ui.position.left / 50)
+                        });
+                    }
+                }
             });
 
+
             if (currentPlayerRole === "wilk") {
+                pieceId = "wolf";
                 $("#wolf").draggable({
                     containment: ".board",
                     grid: [50, 50],
@@ -188,9 +252,18 @@
                           // W przeciwnym razie, usuń opcję revert
                           $(this).draggable('option', 'revert', false);
                       }
-                  }
+                  },
+                  stop: function (event, ui) {
+                    pieceId = $(this).attr("id");
+                    handlePieceStop(event, ui, pieceId);
+                },
+                drop: function (event, ui) {
+                    const pieceId = $(this).attr("id");
+                    handlePieceDrop(event, ui, pieceId);
+                }
                 });
             } else if (currentPlayerRole === "owca") {
+                pieceId = "sheep";
                 $(".sheep").draggable({
                     containment: ".board",
                     grid: [50, 50],
@@ -216,7 +289,15 @@
                           }
                       }
 
-                  },
+                    },
+                    stop: function (event, ui) {
+                        pieceId = $(this).attr("id");
+                        handlePieceStop(event, ui, pieceId);
+                     },
+                    drop: function (event, ui) {
+                        const pieceId = $(this).attr("id");
+                        handlePieceDrop(event, ui, pieceId);
+                    }
                 });
             }
         }
@@ -227,6 +308,7 @@
             wolfPiece.data("current-col", currentPosition.col);
             updatePieceView(wolfPiece, currentPosition);
         }
+
 
         function moveSheepPiece(currentPosition) {
             const sheepPiece = $(".sheep.ui-draggable-dragging");
@@ -246,10 +328,6 @@
 
         $(document).ready(function() {
             setDraggableProperties();
-
-            $(document).on("mouseup", function() {
-                executeMove();
-            });
         });
 
     </script>
