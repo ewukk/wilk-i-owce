@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, session, redirect
+from flask import Flask, render_template, request, session, redirect, json
 from game import Game, create_player, create_game_instance
 
 app = Flask(__name__)
@@ -45,14 +45,24 @@ def game():
 
     if request.method == 'POST':
         user_move = request.form['move']
-        result = game_instance.play_turn(user_move)
-        session['last_move'] = user_move
+        if user_move:
+            user_move = json.loads(user_move)
 
-        if game_instance.is_game_over():
-            pass
+            # Sprawdź, czy użytkownik wykonał już ruch w tej turze
+            if session.get('last_move') is not None:
+                return redirect('/game')
 
-    computer_move = game_instance.get_computer_move()
-    result += game_instance.play_turn(computer_move)
+            result = game_instance.play_turn(user_move)
+            session['last_move'] = user_move
+
+            if game_instance.is_game_over():
+                pass
+
+    # Sprawdź, czy użytkownik wykonał ruch, a następnie wykonaj ruch komputera
+    if session.get('last_move') is not None:
+            computer_move = game_instance.get_computer_move()
+            result += game_instance.play_turn(computer_move)
+            session.pop('last_move')  # Zresetuj ostatni ruch użytkownika
 
     sheeps = game_instance.get_sheep()
     wolf = game_instance.get_wolf()

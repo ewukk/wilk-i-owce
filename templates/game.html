@@ -98,10 +98,10 @@
 
     {% endblock content %}
 
-    <form id="FormId" method="post" action="/game">
+    <!--<form id="FormId" method="post" action="/game">
         <input type="hidden" id="move" name="move" value="">
         <input type="submit" value="Wykonaj ruch" onclick="executeMove()">
-    </form>
+    </form> -->
 
     <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
     <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
@@ -120,14 +120,18 @@
             var currentPosition;
             var pieceId;
 
+            // Sprawdź, czy użytkownik już wykonał ruch w tej turze
+            if ($("#move").val()) {
+                alert("Możesz wykonać tylko jeden ruch w swojej turze.");
+                return;
+            }
+
             if (currentPlayerRole === "wilk") {
-                currentPosition = {
-                    row: Math.floor($("#wolf").position().top / 50),
-                    col: Math.floor($("#wolf").position().left / 50)
-                };
-                pieceId = "wolf";
+                // ... (pozostała część kodu)
             } else if (currentPlayerRole === "owca") {
                 const sheepPiece = $(".sheep.ui-draggable-dragging");
+                if (sheepPiece.length === 0) return;  // Sprawdź, czy pionek owcy jest przesuwany
+
                 currentPosition = {
                     row: Math.floor(sheepPiece.position().top / 50),
                     col: Math.floor(sheepPiece.position().left / 50)
@@ -137,12 +141,13 @@
                 // Gracz nie ma prawa poruszać pionkiem obcej roli
                 return;
             }
+
             // Przypisz aktualną pozycję do formularza
             $("#move").val(JSON.stringify({ pieceId: pieceId, position: currentPosition }));
 
-            // Wyślij formularz
-            $("#FormId").submit();
-         }
+            // Wyłącz możliwość przemieszczania pionków po wykonaniu ruchu
+            $(".piece").draggable("disable");
+        }
 
          function handlePieceDrag(event, ui, movePieceFunction) {
             const startPosition = ui.position;
@@ -241,6 +246,10 @@
 
         $(document).ready(function() {
             setDraggableProperties();
+
+            $(document).on("mouseup", function() {
+                executeMove();
+            });
         });
 
     </script>

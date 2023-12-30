@@ -52,6 +52,9 @@ class Game:
         # Get the move from the current player
         move = user_move
 
+        if any(self.move_history["owca"]) or any(self.move_history["wilk"]):
+            return "Możesz wykonać tylko jeden ruch w swojej turze."
+
         result = "Aktualny stan gry: "
 
         # Ustaw ruch gracza
