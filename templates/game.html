@@ -67,11 +67,6 @@
 
 </head>
 <body>
-    {% set sheep_positions = [] %}
-    {% for sheep in sheeps %}
-        {% set sheep_positions = sheep_positions + [sheep.get_position()] %}
-    {% endfor %}
-
     {% set initial_wolf_row = 0 %}
     {% set initial_wolf_col = 0 %}
     {% set wolf_position = [initial_wolf_row, initial_wolf_col] %}
@@ -82,26 +77,24 @@
     <p>{{ result }}</p>
 
     <div class="board">
-    {% for row in range(8) %}
-        {% for col in range(8) %}
-            <div class="cell {% if (row + col) % 2 == 0 %}white{% else %}black{% endif %}">
-                {% if row == wolf_position[0] and col == wolf_position[1] %}
-                    <!-- Pionek wilka -->
-                    <div class="piece wolf" id="wolf" style="cursor: pointer;" data-initial-position="{{ wolf.get_position() }}"></div>
-                {% endif %}
-                {% for move in move_history["owca"] %}
-                    {% if row == 7 and col % 2 == 0 and loop.index < 5 %}
-                    <!-- Pionki owiec tylko dla pierwszego rzędu -->
-                    <div class="piece sheep" id="sheep{{ loop.index }}" data-piece-type="sheep" style="cursor: pointer;"
-                        data-initial-row="0" data-initial-col="{{ loop.index }}"
-                        data-current-row="0" data-current-col="{{ loop.index }}"></div>
-                {% endif %}
-                {% endfor %}
-            </div>
+        {% for row in range(8) %}
+            {% for col in range(8) %}
+                <div class="cell {% if (row + col) % 2 == 0 %}white{% else %}black{% endif %}">
+                    {% if row == wolf_position[0] and col == wolf_position[1] %}
+                        <!-- Pionek wilka -->
+                        <div class="piece wolf" id="wolf" style="cursor: pointer;" data-initial-position="{{ wolf.get_position() }}"></div>
+                    {% endif %}
+                    {% if row == 7 and col % 2 == 0 %}
+                        {% set sheep_index = col // 2 %}
+                        <!-- Pionki owiec tylko co drugą komórkę w ostatnim rzędzie -->
+                        <div class="piece sheep" data-piece-type="sheep" style="cursor: pointer;"
+                            data-initial-row="{{ initialSheepPositions[sheep_index][0] }}" data-initial-col="{{ initialSheepPositions[sheep_index][1] }}"
+                            data-current-row="{{ initialSheepPositions[sheep_index][0] }}" data-current-col="{{ initialSheepPositions[sheep_index][1] }}"></div>
+                    {% endif %}
+                </div>
+            {% endfor %}
         {% endfor %}
-    {% endfor %}
-</div>
-
+    </div>
 
     {% endblock content %}
 
