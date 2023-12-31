@@ -9,9 +9,15 @@ class ComputerPlayer(Player):
     def set_role(self, role):
         self.role = role
 
+    def get_wolf_position(self):
+        return self.get_wolf().get_position()
+
+    def get_sheep_positions(self):
+        return [sheep.get_position() for sheep in self.get_sheep()]
+
     def make_move(self):
-        wolf_position = self.get_wolf_position()  # Dodaj tę metodę w klasie Player
-        sheep_positions = self.get_sheep_positions()  # Dodaj tę metodę w klasie Player
+        wolf_position = self.get_wolf_position()
+        sheep_positions = self.get_sheep_positions()
         possible_moves = self.get_possible_moves(wolf_position, sheep_positions)
         if possible_moves:
             # Wybierz losowy dozwolony ruch

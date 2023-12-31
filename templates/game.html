@@ -72,17 +72,8 @@
     {% set wolf_position = [initial_wolf_row, initial_wolf_col] %}
 
     {% block content %}
-
-    <p>{{ result }}</p>
-    <p>{{ computer_result }}</p>
-
-
     <h1>Grajmy!</h1>
-
-        {% if not is_game_over %}
-          <p>Gra trwa.</p>
-        {% endif %}
-
+    <p>Teraz tura: {{ current_turn }}</p>
 
     <div class="board">
         {% for row in range(8) %}
@@ -98,9 +89,9 @@
                         {% set sheep_index = col // 2 %}
                         <!-- Pionki owiec tylko co drugą komórkę w ostatnim rzędzie -->
                         <div class="piece sheep" id="sheep{{ sheep_index }}" data-piece-type="sheep" style="cursor: pointer;"
-                            data-initial-row="{{ initialSheepPositions[sheep_index][0] }}" data-initial-col="{{ initialSheepPositions[sheep_index][1] }}"
-                            data-current-row="{{ initialSheepPositions[sheep_index][0] }}" data-current-col="{{ initialSheepPositions[sheep_index][1] }}"
-                            onstop="handlePieceStop(event, ui, 'sheep{{ sheep_index }}')">
+                             data-initial-row="{{ initialSheepPositions[sheep_index][0] }}" data-initial-col="{{ initialSheepPositions[sheep_index][1] }}"
+                             data-current-row="{{ initialSheepPositions[sheep_index][0] }}" data-current-col="{{ initialSheepPositions[sheep_index][1] }}"
+                             onstop="handlePieceStop(event, ui, 'sheep{{ sheep_index }}')">
                         </div>
                     {% endif %}
                 </div>
@@ -124,6 +115,9 @@
 
         var currentPlayerRole = "{{ session.get('player_role') }}";
         console.log('Current Player Role:', currentPlayerRole);
+        var isUserTurn = true;
+        var userMoveCompleted = false;
+        var isMoveExecuted = false;
 
         async function executeMove(pieceId, currentPosition) {
             console.log('Executing move for pieceId:', pieceId, 'at position:', currentPosition);
@@ -147,15 +141,64 @@
                 if (!response.ok) {
                     throw new Error(`HTTP error! Status: ${response.status}`);
                 }
-
-                // Tutaj można dodać dodatkową logikę w przypadku udanej odpowiedzi
+                if (!userMoveCompleted && isUserTurn) {
+                    userMoveCompleted = true; // Oznacz, że użytkownik wykonał ruch
+                    isUserTurn = false; // Ustaw, że teraz jest tura komputera
+                    executeComputerMove(); // Rozpocznij ruch komputera
+                }
 
             } catch (error) {
                 console.error('Error during fetch:', error);
             }
         }
 
+        function executeComputerMove() {
+            const computerMove = {
+                move: 'COMPUTER_MOVE',
+                position: { row: -7, col: -7 }
+            };
 
+            // Pobierz element wilka, który jest przeciągalny
+            const draggableWolf = $("#wolf.ui-draggable");
+
+            // Pobierz wszystkie elementy .sheep, które są przeciągalne
+            const draggableSheep = $(".sheep.ui-draggable");
+
+            // Sprawdź, czy elementy są już zainicjowane jako przeciągalne
+            if (draggableWolf.length > 0) {
+                draggableWolf.draggable("enable");
+            }
+            if (draggableSheep.length > 0) {
+                draggableSheep.draggable("enable");
+            }
+
+            fetch('/game', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(computerMove),
+                credentials: 'same-origin',
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                if (draggableWolf.length > 0) {
+                    draggableWolf.draggable("disable");
+                }
+
+                if (draggableSheep.length > 0) {
+                    draggableSheep.draggable("disable");
+                }
+                isUserTurn = true;
+                isMoveExecuted = false; // Zresetuj zmienną po zakończeniu tury komputera
+
+            })
+            .catch(error => {
+                console.error('Error during fetch:', error);
+            });
+        }
 
 
 
@@ -167,6 +210,8 @@
 
 
          function handlePieceDrag(event, ui, movePieceFunction) {
+            ui.helper.data("moveReported", false);
+
             const startPosition = ui.originalPosition;
             const endPosition = ui.helper.position();
 
@@ -188,31 +233,40 @@
                 row: Math.floor(ui.position.top / 50),
                 col: Math.floor(ui.position.left / 50)
             };
-            // Dodaj sprawdzenie, czy ruch już został zgłoszony
-            if (!ui.helper.data("moveReported")) {
-                ui.helper.data("moveReported", true); // Oznacz ruch jako zgłoszony
 
-                // Przed uruchomieniem funkcji executeMove sprawdź, czy ruch już został zgłoszony
-                executeMove(pieceId, currentPosition);
+            if (!userMoveCompleted && isUserTurn) {
+                setTimeout(() => executeMove(pieceId, currentPosition), 500); // Opóźnienie o 500 ms (przykładowe wartości)
+                isMoveExecuted = true;
             }
-
         }
 
-        function handlePieceDrop(event, ui, pieceId) {
-            const currentPosition = {
-                row: Math.floor(ui.position.top / 50),
-                col: Math.floor(ui.position.left / 50)
-            };
+        function endUserTurn() {
+            $(".piece").draggable("disable"); // Wyłącz przeciąganie dla wszystkich pionków
+            isUserTurn = false;
+            executeComputerMove();
+        }
 
-            executeMove(pieceId, currentPosition);
+
+
+
+        function handlePieceDrop(event, ui, pieceId) {
+            if (!isMoveExecuted && isUserTurn) {
+                const currentPosition = {
+                    row: Math.floor(ui.position.top / 50),
+                    col: Math.floor(ui.position.left / 50)
+                };
+                setTimeout(() => executeMove(pieceId, currentPosition), 500); // Opóźnienie o 500 ms (przykładowe wartości)
+                isMoveExecuted = true;
+                endUserTurn(); // Zakończ turę użytkownika
+            }
         }
 
 
         function setDraggableProperties() {
             var pieceId = "";
 
-            $(".piece").on("stop", function(event, ui) {
-                // Zmienna pieceId jest dostępna tutaj
+            $(".piece").on("stop", function(event) {
+                var ui = event.ui;
                 pieceId = $(this).attr("id");
 
                 // Upewnij się, że pieceId nie jest undefined przed wywołaniem startsWith

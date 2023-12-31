@@ -1,4 +1,5 @@
 import random
+import logging
 
 from flask import Flask, session, redirect
 from Players.Player import Player, SheepPlayer, WolfPlayer
@@ -32,6 +33,7 @@ class Game:
         self.current_player = self.player
         self.last_move = None
         self.player_role = None
+        self.user_move_completed = False
         self.move_history = {"owca": [], "wilk": []}
         self.wolf = Wolf(350, 50)
         self.sheep = [Sheep(50 * i, 350) for i in range(4)]
@@ -62,13 +64,25 @@ class Game:
             self.player if self.current_player == self.computer_player else self.computer_player
         )
 
+    def is_player_turn(self):
+        return self.current_player == self.player
+
+    def is_computer_turn(self):
+        return self.current_player == self.computer_player
+
+    def switch_to_player(self):
+        self.current_player = self.player
+
+    def switch_to_computer(self):
+        self.current_player = self.computer_player
+
     def play_turn(self, user_move=None):
         print("DEBUG: Play Turn - Start")
         result = "Aktualny stan gry: "
 
         if user_move:
             # Gracz wykonał ruch
-            if self.last_move is not None:
+            if self.last_move is not None or self.user_move_completed:
                 return "Możesz wykonać tylko jeden ruch w swojej turze."
 
             if self.player_role not in self.move_history:
@@ -80,6 +94,7 @@ class Game:
                 self.move_history[self.player_role].append({"player": self.player_role, "move": user_move})
 
             self.last_move = user_move
+            self.user_move_completed = True
 
             if self.is_game_over():
                 result += self.is_game_over()[1]  # Dodaj informację o zakończeniu gry
@@ -93,7 +108,8 @@ class Game:
         is_game_over, computer_result = self.is_game_over()
         if not is_game_over:
             if self.last_move is not None:
-                if isinstance(self.current_player, ComputerPlayer):
+                # Sprawdź, czy jest tura komputera
+                if not self.is_player_turn():
                     computer_move = self.get_computer_move()
                     print(f"DEBUG: Computer move: {computer_move}")
                     result += f"\n{self.current_player.get_role()} wykonuje ruch: {computer_move}"

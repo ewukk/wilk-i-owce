@@ -2,6 +2,8 @@ class Player:
     def __init__(self):
         self.role = None
         self.position = None
+        self.wolf = None
+        self.sheep = None
 
     def get_role(self):
         return self.role
@@ -15,6 +17,12 @@ class Player:
     def set_move(self, new_position=None):
         if new_position is not None:
             self.position = new_position
+
+    def get_wolf(self):
+        return self.wolf
+
+    def get_sheep(self):
+        return self.sheep
 
 
 class SheepPlayer(Player):
