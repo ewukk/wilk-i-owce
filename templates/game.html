@@ -218,10 +218,19 @@
             // Sprawdzenie, czy ruch jest na ukos
             if (isDiagonalMovement(startPosition, endPosition)) {
                 // Dodaj logikę przemieszczania pionka
-                movePieceFunction({
+                const newPosition = {
                     row: Math.floor(endPosition.top / 50),
                     col: Math.floor(endPosition.left / 50)
-                });
+                };
+
+                // Sprawdź kolizje z innymi pionkami
+                if (!hasCollisions(ui.helper, newPosition)) {
+                    // Wykonaj ruch tylko jeśli nie ma kolizji
+                    movePieceFunction(newPosition);
+                } else {
+                    // Jeśli jest kolizja, przywróć poprzednią pozycję
+                    ui.helper.css(ui.originalPosition);
+                }
             } else {
                 // Jeśli ruch nie jest na ukos, przywróć poprzednią pozycję
                 ui.helper.css(ui.originalPosition);
@@ -235,7 +244,7 @@
             };
 
             if (!userMoveCompleted && isUserTurn) {
-                setTimeout(() => executeMove(pieceId, currentPosition), 500); // Opóźnienie o 500 ms (przykładowe wartości)
+                executeMove(pieceId, currentPosition); // Opóźnienie o 500 ms (przykładowe wartości)
                 isMoveExecuted = true;
             }
         }
@@ -255,9 +264,13 @@
                     row: Math.floor(ui.position.top / 50),
                     col: Math.floor(ui.position.left / 50)
                 };
-                setTimeout(() => executeMove(pieceId, currentPosition), 500); // Opóźnienie o 500 ms (przykładowe wartości)
-                isMoveExecuted = true;
-                endUserTurn(); // Zakończ turę użytkownika
+                if (!hasCollisions(ui.helper, currentPosition)) {
+                    executeMove(pieceId, currentPosition);
+                    isMoveExecuted = true;
+                    endUserTurn();
+                } else {
+                    ui.helper.draggable('option', 'revert', true);
+                }
             }
         }
 
@@ -295,6 +308,7 @@
                     grid: [50, 50],
                     disabled: false,
                     drag: function (event, ui) {
+                        checkCollisions(ui.helper);
                       const startPosition = ui.originalPosition;
                       const endPosition = ui.position;
 
@@ -323,6 +337,7 @@
                     grid: [50, 50],
                     disabled: false,
                     drag: function (event, ui) {
+                        checkCollisions(ui.helper);
                       const startPosition = ui.originalPosition;
                       const endPosition = ui.position;
 
@@ -354,6 +369,83 @@
                     }
                 });
             }
+        }
+
+        function checkCollisions(movingPiece) {
+            const currentPosition = {
+                row: Math.floor(movingPiece.position().top / 50),
+                col: Math.floor(movingPiece.position().left / 50)
+            };
+
+            if (hasCollisions(movingPiece, currentPosition)) {
+                movingPiece.draggable('option', 'revert', true);
+            }
+        }
+
+        function hasSheepCollisions(movingPiece, newPosition) {
+            const otherSheepPieces = $(".sheep").not(movingPiece);
+            let hasCollision = false;
+
+            otherSheepPieces.each(function() {
+                const piecePosition = {
+                    row: Math.floor($(this).position().top / 50),
+                    col: Math.floor($(this).position().left / 50)
+                };
+
+                if (piecePosition.row === newPosition.row && piecePosition.col === newPosition.col) {
+                    // Znaleziono kolizję
+                    hasCollision = true;
+                    return false; // Przerwij pętlę each, ponieważ znaleziono kolizję
+                }
+            });
+
+            // Sprawdź, czy na nowej pozycji jest już jakaś owca
+            const newPositionOccupied = $(".sheep").filter(function() {
+                const piecePosition = {
+                    row: Math.floor($(this).position().top / 50),
+                    col: Math.floor($(this).position().left / 50)
+                };
+                return piecePosition.row === newPosition.row && piecePosition.col === newPosition.col;
+            }).length > 0;
+
+            return hasCollision || newPositionOccupied;
+        }
+
+
+        function isCollisionWithWolf(movingPiece, newPosition) {
+            const wolfPiece = $("#wolf");
+            const wolfPosition = {
+                row: Math.floor(wolfPiece.position().top / 50),
+                col: Math.floor(wolfPiece.position().left / 50)
+            };
+
+            return wolfPosition.row === newPosition.row && wolfPosition.col === newPosition.col;
+        }
+
+
+        function hasCollisions(movingPiece, newPosition) {
+            return isCollisionWithWolf(movingPiece, newPosition) || hasSheepCollisions(movingPiece, newPosition);
+        }
+
+
+        function isCollision(piece1, piece2) {
+            const rect1 = {
+                left: piece1.position().left,
+                top: piece1.position().top,
+                right: piece1.position().left + piece1.width(),
+                bottom: piece1.position().top + piece1.height()
+            };
+            const rect2 = {
+                left: piece2.position().left,
+                top: piece2.position().top,
+                right: piece2.position().left + piece2.width(),
+                bottom: piece2.position().top + piece2.height()
+            };
+
+            return !(rect1.right < rect2.left ||
+                     rect1.left > rect2.right ||
+                     rect1.bottom < rect2.top ||
+                     rect1.top > rect2.bottom);
         }
 
         function moveWolfPiece(currentPosition) {

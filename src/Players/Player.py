@@ -8,6 +8,9 @@ class Player:
     def get_role(self):
         return self.role
 
+    def set_role(self, role):
+        self.role = role
+
     def make_move(self):
         if self.position is not None:
             return f"Aktualna pozycja gracza {self.role}: {self.position}"
@@ -24,6 +27,9 @@ class Player:
     def get_sheep(self):
         return self.sheep
 
+    def set_player_role(self, role):
+        self.role = role
+
 
 class SheepPlayer(Player):
     def get_wolf_position(self):
@@ -32,6 +38,9 @@ class SheepPlayer(Player):
     def get_sheep_positions(self):
         return [sheep.get_position() for sheep in self.get_sheep()]
 
+    def set_player_role(self, role):
+        super().set_player_role(role)
+
 
 class WolfPlayer(Player):
     def get_wolf_position(self):
@@ -39,3 +48,6 @@ class WolfPlayer(Player):
 
     def get_sheep_positions(self):
         return [sheep.get_position() for sheep in self.get_sheep()]
+
+    def set_player_role(self, role):
+        super().set_player_role(role)

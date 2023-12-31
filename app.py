@@ -17,7 +17,9 @@ def create_game_instance(session):
     player_role = session.get('player_role')
     player = create_player(player_role)
     computer_player = ComputerPlayer()
-    return Game(player, computer_player, session)
+    game_instance = Game(player, computer_player, session)
+    game_instance.set_player_role(player_role)
+    return game_instance
 
 
 @app.before_request
@@ -136,10 +138,8 @@ def handle_game_move():
 
 def handle_player_move(user_move):
     try:
-        print("DEBUG: Handling computer move")
-        piece_id = user_move.get('pieceId')
-        position = user_move.get('position')
-        game_instance.play_turn(position)
+        print("DEBUG: Handling player move")
+        game_instance.play_turn(user_move)  # Użyj user_move bez rozpakowywania
     except Exception as e:
         raise ValueError(f"Error handling player move: {str(e)}")
 

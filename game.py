@@ -94,6 +94,7 @@ class Game:
                 self.move_history[self.player_role].append({"player": self.player_role, "move": user_move})
 
             self.last_move = user_move
+            self.update_positions_based_on_player_move(user_move)
             self.user_move_completed = True
 
             if self.is_game_over():
@@ -111,6 +112,7 @@ class Game:
                 # Sprawdź, czy jest tura komputera
                 if not self.is_player_turn():
                     computer_move = self.get_computer_move()
+                    self.update_positions_based_on_computer_move(computer_move)
                     print(f"DEBUG: Computer move: {computer_move}")
                     result += f"\n{self.current_player.get_role()} wykonuje ruch: {computer_move}"
                     self.move_history[self.current_player.get_role()].append(
@@ -123,6 +125,50 @@ class Game:
 
         print(f"DEBUG: Play Turn - End. Result={result}")
         return result
+
+    def update_positions_based_on_player_move(self, user_move):
+        # Pobierz aktualne pozycje owiec i wilka
+        wolf_position = self.get_wolf().get_position()
+        sheep_positions = [sheep.get_position() for sheep in self.get_sheep()]
+
+        # Zaktualizuj pozycje w zależności od ruchu gracza
+        new_wolf_position = self.calculate_new_position(wolf_position, user_move)
+        if new_wolf_position is not None:
+            self.get_wolf().set_position(*new_wolf_position)
+
+        new_sheep_positions = [self.calculate_new_position(pos, user_move) for pos in sheep_positions]
+        for i in range(len(self.get_sheep())):
+            if new_sheep_positions[i] is not None:
+                self.get_sheep()[i].set_position(*new_sheep_positions[i])
+
+    def update_positions_based_on_computer_move(self, computer_move):
+        # Pobierz aktualne pozycje owiec i wilka
+        wolf_position = self.get_wolf().get_position()
+        sheep_positions = [sheep.get_position() for sheep in self.get_sheep()]
+
+        # Zaktualizuj pozycje w zależności od ruchu komputera
+        new_wolf_position = self.calculate_new_position(wolf_position, computer_move)
+        if new_wolf_position is not None:
+            self.get_wolf().set_position(*new_wolf_position)
+
+        new_sheep_positions = [self.calculate_new_position(pos, computer_move) for pos in sheep_positions]
+        for i in range(len(self.get_sheep())):
+            if new_sheep_positions[i] is not None:
+                self.get_sheep()[i].set_position(*new_sheep_positions[i])
+
+    def calculate_new_position(self, current_position, move):
+        # Metoda do obliczania nowej pozycji na podstawie aktualnej pozycji i ruchu
+        x, y = current_position
+        if move == 'DIAGONAL_UP_LEFT':
+            return x - 1, y - 1
+        elif move == 'DIAGONAL_UP_RIGHT':
+            return x - 1, y + 1
+        elif move == 'DIAGONAL_DOWN_LEFT':
+            return x + 1, y - 1
+        elif move == 'DIAGONAL_DOWN_RIGHT':
+            return x + 1, y + 1
+        else:
+            return x, y
 
     def get_move_history(self):
         # Ustaw domyślną rolę, jeśli player_role nie jest ustawiona

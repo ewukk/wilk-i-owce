@@ -9,6 +9,14 @@ class ComputerPlayer(Player):
     def set_role(self, role):
         self.role = role
 
+    def set_player_role(self, role):
+        if role == 'owca':
+            self.role = 'wilk'
+        elif role == 'wilk':
+            self.role = 'owca'
+        else:
+            raise ValueError(f"Nieznana rola: {role}")
+
     def get_wolf_position(self):
         return self.get_wolf().get_position()
 
