@@ -49,32 +49,12 @@ class ComputerPlayer(Player):
         possible_moves = []
 
         if self.role == "wilk":
-            for sheep_position in sheep_positions:
-                if sheep_position[0] < wolf_position[0]:
-                    possible_moves.append("RIGHT")
-                elif sheep_position[0] > wolf_position[0]:
-                    possible_moves.append("LEFT")
-
-                if sheep_position[1] < wolf_position[1]:
-                    possible_moves.append("DOWN")
-                elif sheep_position[1] > wolf_position[1]:
-                    possible_moves.append("UP")
-
+            possible_moves.extend(["DIAGONAL_UP_LEFT", "DIAGONAL_UP_RIGHT", "DIAGONAL_DOWN_LEFT", "DIAGONAL_DOWN_RIGHT"])
             # Dodaj ruch losowy
             possible_moves.append("RANDOM")
 
         elif self.role == "owca":
-            for sheep_position in sheep_positions:
-                if wolf_position[0] < sheep_position[0]:
-                    possible_moves.append("RIGHT")
-                elif wolf_position[0] > sheep_position[0]:
-                    possible_moves.append("LEFT")
-
-                if wolf_position[1] < sheep_position[1]:
-                    possible_moves.append("DOWN")
-                elif wolf_position[1] > sheep_position[1]:
-                    possible_moves.append("UP")
-
+            possible_moves.extend(["DIAGONAL_UP_LEFT", "DIAGONAL_UP_RIGHT"])
             # Dodaj ruch losowy
             possible_moves.append("RANDOM")
 

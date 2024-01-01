@@ -120,9 +120,8 @@
         var isMoveExecuted = false;
 
         async function executeMove(pieceId, currentPosition) {
-            console.log('Executing move for pieceId:', pieceId, 'at position:', currentPosition);
-
             var userMove = {
+                move: 'USER_MOVE',
                 pieceId: pieceId,
                 position: currentPosition
             };
@@ -141,7 +140,8 @@
                 if (!response.ok) {
                     throw new Error(`HTTP error! Status: ${response.status}`);
                 }
-                if (!userMoveCompleted && isUserTurn) {
+
+                if (!userMoveCompleted && isUserTurn && userMove.move === 'USER_MOVE') {
                     userMoveCompleted = true; // Oznacz, że użytkownik wykonał ruch
                     isUserTurn = false; // Ustaw, że teraz jest tura komputera
                     executeComputerMove(); // Rozpocznij ruch komputera
@@ -151,6 +151,7 @@
                 console.error('Error during fetch:', error);
             }
         }
+
 
         function executeComputerMove() {
             const computerMove = {
@@ -210,30 +211,34 @@
 
 
          function handlePieceDrag(event, ui, movePieceFunction) {
-            ui.helper.data("moveReported", false);
+             try {
+                ui.helper.data("moveReported", false);
 
-            const startPosition = ui.originalPosition;
-            const endPosition = ui.helper.position();
+                const startPosition = ui.originalPosition;
+                const endPosition = ui.helper.position();
 
-            // Sprawdzenie, czy ruch jest na ukos
-            if (isDiagonalMovement(startPosition, endPosition)) {
-                // Dodaj logikę przemieszczania pionka
-                const newPosition = {
-                    row: Math.floor(endPosition.top / 50),
-                    col: Math.floor(endPosition.left / 50)
-                };
+                // Sprawdzenie, czy ruch jest na ukos
+                if (isDiagonalMovement(startPosition, endPosition)) {
+                    // Dodaj logikę przemieszczania pionka
+                    const newPosition = {
+                        row: Math.floor(endPosition.top / 50),
+                        col: Math.floor(endPosition.left / 50)
+                    };
 
-                // Sprawdź kolizje z innymi pionkami
-                if (!hasCollisions(ui.helper, newPosition)) {
-                    // Wykonaj ruch tylko jeśli nie ma kolizji
-                    movePieceFunction(newPosition);
+                    // Sprawdź kolizje z innymi pionkami
+                    if (!hasCollisions(ui.helper, newPosition)) {
+                        // Wykonaj ruch tylko jeśli nie ma kolizji
+                        movePieceFunction(newPosition);
+                    } else {
+                        // Jeśli jest kolizja, przywróć poprzednią pozycję
+                        ui.helper.css(ui.originalPosition);
+                    }
                 } else {
-                    // Jeśli jest kolizja, przywróć poprzednią pozycję
+                    // Jeśli ruch nie jest na ukos, przywróć poprzednią pozycję
                     ui.helper.css(ui.originalPosition);
                 }
-            } else {
-                // Jeśli ruch nie jest na ukos, przywróć poprzednią pozycję
-                ui.helper.css(ui.originalPosition);
+            } catch (error) {
+                console.error('Error during piece drag:', error);
             }
         }
 

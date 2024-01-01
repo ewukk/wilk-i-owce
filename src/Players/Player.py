@@ -8,9 +8,6 @@ class Player:
     def get_role(self):
         return self.role
 
-    def set_role(self, role):
-        self.role = role
-
     def make_move(self):
         if self.position is not None:
             return f"Aktualna pozycja gracza {self.role}: {self.position}"

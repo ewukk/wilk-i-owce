@@ -1,7 +1,6 @@
 import random
-import logging
 
-from flask import Flask, session, redirect
+from flask import session
 from Players.Player import Player, SheepPlayer, WolfPlayer
 from Players.ComputerPlayer import ComputerPlayer
 from Figures.Sheep import Sheep
@@ -45,19 +44,14 @@ class Game:
         return self.sheep
 
     def set_player_role(self, role):
-        print(f"Setting player role to: {role}")
         if role == 'owca':
             self.player.set_player_role(role)
             self.computer_player.set_player_role('wilk')
-            self.current_player = self.player
         elif role == 'wilk':
-            self.player.set_player_role('owca')
-            self.computer_player.set_player_role(role)
-            self.current_player = self.computer_player
+            self.player.set_player_role(role)
+            self.computer_player.set_player_role('owca')
         else:
             raise ValueError(f"Nieznana rola: {role}")
-
-        print(f"Player role set to: {self.current_player.get_role()}")
 
     def switch_player(self):
         self.current_player = (
@@ -65,9 +59,11 @@ class Game:
         )
 
     def is_player_turn(self):
+        print(f"DEBUG: Checking if it's player's turn. Current player: {self.current_player.get_role()}")
         return self.current_player == self.player
 
     def is_computer_turn(self):
+        print(f"DEBUG: Checking if it's computer's turn. Current player: {self.current_player.get_role()}")
         return self.current_player == self.computer_player
 
     def switch_to_player(self):
@@ -77,18 +73,15 @@ class Game:
         self.current_player = self.computer_player
 
     def play_turn(self, user_move=None):
+        result = ""
         print("DEBUG: Play Turn - Start")
-        result = "Aktualny stan gry: "
 
         if user_move:
+            session['current_turn'] = 'player'
+
             # Gracz wykonał ruch
             if self.last_move is not None or self.user_move_completed:
                 return "Możesz wykonać tylko jeden ruch w swojej turze."
-
-            if self.player_role not in self.move_history:
-                self.move_history[self.player_role] = []
-
-            result += f"\n{self.current_player.get_role()} wykonuje ruch: {user_move}"
 
             if self.current_player is not None:
                 self.move_history[self.player_role].append({"player": self.player_role, "move": user_move})
@@ -100,31 +93,78 @@ class Game:
             if self.is_game_over():
                 result += self.is_game_over()[1]  # Dodaj informację o zakończeniu gry
                 return result
-        else:
-            # Gracz nie wykonał ruchu, przekieruj z powrotem do gry
-            print("DEBUG: Brak ruchu gracza.")
-            return redirect('/game')
 
         # Sprawdź, czy użytkownik wykonał ruch
-        is_game_over, computer_result = self.is_game_over()
-        if not is_game_over:
-            if self.last_move is not None:
-                # Sprawdź, czy jest tura komputera
-                if not self.is_player_turn():
-                    computer_move = self.get_computer_move()
-                    self.update_positions_based_on_computer_move(computer_move)
-                    print(f"DEBUG: Computer move: {computer_move}")
-                    result += f"\n{self.current_player.get_role()} wykonuje ruch: {computer_move}"
-                    self.move_history[self.current_player.get_role()].append(
-                        {"player": self.current_player.get_role(), "move": computer_move}
-                    )
-                    self.last_move = computer_move
-                    is_game_over, computer_result = self.is_game_over()
-                    self.switch_player()  # Przełącz gracza po wykonaniu ruchu
-                    print(f"DEBUG: Current player after computer move: {self.current_player.get_role()}")
+            if not self.user_move_completed:
+                # Gracz nie wykonał jeszcze ruchu, zakończ tę turę
+                return result
+            elif not self.is_player_turn():
+                # Jest tura komputera
+                session['current_turn'] = 'computer'
+                session['player_role'] = session['computer_role']
+                computer_move = self.get_computer_move()
+                self.update_positions_based_on_computer_move(computer_move)
+                print(f"DEBUG: Computer move: {computer_move}")
 
-        print(f"DEBUG: Play Turn - End. Result={result}")
+                self.move_history[self.current_player.get_role()].append(
+                    {"player": self.current_player.get_role(), "move": computer_move}
+                )
+                self.last_move = computer_move
+                self.user_move_completed = False
+                self.is_game_over()
+
         return result
+
+    def get_computer_move(self, wolf_position=None, sheep_positions=None, computer_role=None):
+        global possible_moves, move_mapping
+        print("DEBUG: Get Computer Move - Start")
+        print(f"Komputer widzi grę jako {computer_role}")
+
+        if isinstance(self.computer_player, ComputerPlayer):
+            if wolf_position is None:
+                wolf_position = self.get_wolf().get_position()
+            if sheep_positions is None:
+                sheep_positions = [sheep.get_position() for sheep in self.get_sheep()]
+
+            # Sprawdź rolę komputera
+            if computer_role == "wilk":
+                possible_moves = self.computer_player.get_possible_moves(wolf_position, sheep_positions)
+                # Dostosuj format ruchu do oczekiwanego formatu w grze
+                move_mapping = {
+                    "DIAGONAL_UP_LEFT": "UP_LEFT",
+                    "DIAGONAL_UP_RIGHT": "UP_RIGHT",
+                    "DIAGONAL_DOWN_LEFT": "DOWN_LEFT",
+                    "DIAGONAL_DOWN_RIGHT": "DOWN_RIGHT",
+                }
+            elif computer_role == "owca":
+                # Wybierz losową owcę
+                chosen_sheep = random.choice(self.get_sheep())
+                # Oblicz ruch na podstawie pozycji wybranej owcy
+                chosen_move = self.calculate_new_position(wolf_position, chosen_sheep.get_position())
+                possible_moves = [chosen_move]
+                # Dostosuj format ruchu do oczekiwanego formatu w grze
+                move_mapping = {
+                    "DIAGONAL_UP_LEFT": "UP_LEFT",
+                    "DIAGONAL_UP_RIGHT": "UP_RIGHT",
+                }
+
+            # Sprawdź dostępne ruchy
+            if possible_moves:
+                # Wybierz losowy dozwolony ruch
+                chosen_move = random.choice(possible_moves)
+                print(f"DEBUG: Computer possible moves: {possible_moves}")
+                print(f"DEBUG: Computer chosen move: {chosen_move}")
+                print("DEBUG: Get Computer Move - End")
+                # Mapuj ruch na oczekiwany format w grze
+                chosen_move = move_mapping.get(chosen_move, "RANDOM")
+                return chosen_move
+            else:
+                print("Brak dostępnych ruchów dla komputera")
+                return "Brak dostępnych ruchów"
+        else:
+            print(
+                f"Aktualny gracz ({computer_role}) nie jest komputerem, nie można uzyskać ruchu komputera.")
+            return "Aktualny gracz nie jest komputerem, nie można uzyskać ruchu komputera"
 
     def update_positions_based_on_player_move(self, user_move):
         # Pobierz aktualne pozycje owiec i wilka
@@ -172,33 +212,14 @@ class Game:
 
     def get_move_history(self):
         # Ustaw domyślną rolę, jeśli player_role nie jest ustawiona
-        print(f"Komputer widzi grę jako {self.role}")
+        print(f"Komputer widzi grę jako {self.current_player.get_role()}")
         player_role = self.current_player.get_player_role() if self.current_player.get_player_role() is not None else 'owca'
-        return self.move_history.get(player_role, [])
 
-    def get_computer_move(self):
-        print("DEBUG: Get Computer Move - Start")
-        print(f"Komputer widzi grę jako {self.current_player.role}")
-
+        # Uwzględnij rolę komputera
         if isinstance(self.current_player, ComputerPlayer):
-            wolf_position = self.get_wolf().get_position()
-            sheep_positions = [sheep.get_position() for sheep in self.get_sheep()]
+            player_role = self.current_player.get_role()
 
-            possible_moves = self.current_player.get_possible_moves(wolf_position, sheep_positions)
-
-            if possible_moves:
-                # Wybierz losowy dozwolony ruch
-                chosen_move = random.choice(possible_moves)
-                print(f"DEBUG: Computer possible moves: {possible_moves}")
-                print(f"DEBUG: Computer chosen move: {chosen_move}")
-                print("DEBUG: Get Computer Move - End")
-                return chosen_move
-            else:
-                print("Brak dostępnych ruchów dla komputera")
-                return "Brak dostępnych ruchów"
-        else:
-            print("Aktualny gracz nie jest komputerem, nie można uzyskać ruchu komputera.")
-            return "Aktualny gracz nie jest komputerem, nie można uzyskać ruchu komputera"
+        return self.move_history.get(player_role, [])
 
     def is_game_over(self):
         if self.is_wolf_winner():
@@ -231,5 +252,3 @@ class Game:
             for sheep in self.sheep)
 
         return blocked_condition
-
-    # def init_flask_routes(self):
