@@ -1,10 +1,9 @@
-import random
-
-from flask import session
+from flask import session, jsonify
 from Players.Player import Player, SheepPlayer, WolfPlayer
 from Players.ComputerPlayer import ComputerPlayer
 from Figures.Sheep import Sheep
 from Figures.Wolf import Wolf
+import random
 
 
 def create_game_instance(session):
@@ -22,6 +21,11 @@ def create_player(role):
         raise ValueError(f"Nieznana rola: {role}")
 
 
+def is_position_within_board(position, BOARD_SIZE=8, TILE_SIZE=50):
+    max_coordinate = BOARD_SIZE * TILE_SIZE
+    return 0 <= position[0] < max_coordinate and 0 <= position[1] < max_coordinate
+
+
 class Game:
     def __init__(self, player, computer_player, session):
         # self.app = app  # Ta linia może być problemem, ale zostaw ją na razie
@@ -35,7 +39,7 @@ class Game:
         self.user_move_completed = False
         self.move_history = {"owca": [], "wilk": []}
         self.wolf = Wolf(350, 50)
-        self.sheep = [Sheep(50 * i, 350) for i in range(4)]
+        self.sheep = [Sheep(50 * i, 350) for i in range(1, 8, 2)]
 
     def get_wolf(self):
         return self.wolf
@@ -62,16 +66,6 @@ class Game:
         print(f"DEBUG: Checking if it's player's turn. Current player: {self.current_player.get_role()}")
         return self.current_player == self.player
 
-    def is_computer_turn(self):
-        print(f"DEBUG: Checking if it's computer's turn. Current player: {self.current_player.get_role()}")
-        return self.current_player == self.computer_player
-
-    def switch_to_player(self):
-        self.current_player = self.player
-
-    def switch_to_computer(self):
-        self.current_player = self.computer_player
-
     def play_turn(self, user_move=None):
         result = ""
         print("DEBUG: Play Turn - Start")
@@ -94,14 +88,18 @@ class Game:
                 result += self.is_game_over()[1]  # Dodaj informację o zakończeniu gry
                 return result
 
-        # Sprawdź, czy użytkownik wykonał ruch
+            # Sprawdź, czy użytkownik wykonał ruch
             if not self.user_move_completed:
                 # Gracz nie wykonał jeszcze ruchu, zakończ tę turę
                 return result
             elif not self.is_player_turn():
                 # Jest tura komputera
                 session['current_turn'] = 'computer'
-                session['player_role'] = session['computer_role']
+
+                # Aktualizuj rolę komputera tylko wtedy, gdy jest to tura komputera
+                if self.current_player == self.computer_player:
+                    session['player_role'] = session['computer_role']
+
                 computer_move = self.get_computer_move()
                 self.update_positions_based_on_computer_move(computer_move)
                 print(f"DEBUG: Computer move: {computer_move}")
@@ -115,56 +113,44 @@ class Game:
 
         return result
 
-    def get_computer_move(self, wolf_position=None, sheep_positions=None, computer_role=None):
-        global possible_moves, move_mapping
-        print("DEBUG: Get Computer Move - Start")
-        print(f"Komputer widzi grę jako {computer_role}")
+    def get_computer_move(self):
+        global move_mapping
+        print("DEBUG: Pobierz Ruch Komputera - Start")
+        print(f"Komputer widzi grę jako {self.computer_player.get_role()}")
+        computer_role = self.computer_player.get_role()
+        wolf_position = self.wolf.get_position()
+        sheep_positions = [sheep.get_position() for sheep in self.get_sheep()]
 
-        if isinstance(self.computer_player, ComputerPlayer):
-            if wolf_position is None:
-                wolf_position = self.get_wolf().get_position()
-            if sheep_positions is None:
-                sheep_positions = [sheep.get_position() for sheep in self.get_sheep()]
+        # Sprawdź rolę komputera
+        if computer_role == "wilk":
+            possible_moves = self.calculate_new_position(wolf_position, sheep_positions)
+            # Dostosuj format ruchu do oczekiwanego formatu w grze
+            move_mapping = {
+                "DIAGONAL_UP_LEFT": "DIAGONAL_UP_LEFT",
+                "DIAGONAL_UP_RIGHT": "DIAGONAL_UP_RIGHT",
+                "DIAGONAL_DOWN_LEFT": "DIAGONAL_DOWN_LEFT",
+                "DIAGONAL_DOWN_RIGHT": "DIAGONAL_DOWN_RIGHT",
+            }
+        elif computer_role == "owca":
+            # Wybierz losową owcę
+            chosen_sheep = random.choice(self.get_sheep())
+            # Oblicz ruch na podstawie pozycji wybranej owcy
+            chosen_move = self.calculate_new_position(self.wolf.get_position(), chosen_sheep.get_position())
+            possible_moves = [chosen_move]
+            # Dostosuj format ruchu do oczekiwanego formatu w grze
+            move_mapping = {
+                "DIAGONAL_UP_LEFT": "DIAGONAL_UP_LEFT",
+                "DIAGONAL_UP_RIGHT": "DIAGONAL_UP_RIGHT",
+            }
 
-            # Sprawdź rolę komputera
-            if computer_role == "wilk":
-                possible_moves = self.computer_player.get_possible_moves(wolf_position, sheep_positions)
-                # Dostosuj format ruchu do oczekiwanego formatu w grze
-                move_mapping = {
-                    "DIAGONAL_UP_LEFT": "UP_LEFT",
-                    "DIAGONAL_UP_RIGHT": "UP_RIGHT",
-                    "DIAGONAL_DOWN_LEFT": "DOWN_LEFT",
-                    "DIAGONAL_DOWN_RIGHT": "DOWN_RIGHT",
-                }
-            elif computer_role == "owca":
-                # Wybierz losową owcę
-                chosen_sheep = random.choice(self.get_sheep())
-                # Oblicz ruch na podstawie pozycji wybranej owcy
-                chosen_move = self.calculate_new_position(wolf_position, chosen_sheep.get_position())
-                possible_moves = [chosen_move]
-                # Dostosuj format ruchu do oczekiwanego formatu w grze
-                move_mapping = {
-                    "DIAGONAL_UP_LEFT": "UP_LEFT",
-                    "DIAGONAL_UP_RIGHT": "UP_RIGHT",
-                }
+        # Wybierz jeden ruch z move_mapping, nawet jeśli brak dostępnych ruchów
+        chosen_move = random.choice(list(move_mapping.values()))
 
-            # Sprawdź dostępne ruchy
-            if possible_moves:
-                # Wybierz losowy dozwolony ruch
-                chosen_move = random.choice(possible_moves)
-                print(f"DEBUG: Computer possible moves: {possible_moves}")
-                print(f"DEBUG: Computer chosen move: {chosen_move}")
-                print("DEBUG: Get Computer Move - End")
-                # Mapuj ruch na oczekiwany format w grze
-                chosen_move = move_mapping.get(chosen_move, "RANDOM")
-                return chosen_move
-            else:
-                print("Brak dostępnych ruchów dla komputera")
-                return "Brak dostępnych ruchów"
-        else:
-            print(
-                f"Aktualny gracz ({computer_role}) nie jest komputerem, nie można uzyskać ruchu komputera.")
-            return "Aktualny gracz nie jest komputerem, nie można uzyskać ruchu komputera"
+        print(f"DEBUG: Wybrany ruch komputera: {chosen_move}")
+        print("DEBUG: Pobierz Ruch Komputera - Koniec")
+
+        # Zwróć bezpośrednio ruch komputera, bez jsonify
+        return chosen_move
 
     def update_positions_based_on_player_move(self, user_move):
         # Pobierz aktualne pozycje owiec i wilka
@@ -190,25 +176,41 @@ class Game:
         new_wolf_position = self.calculate_new_position(wolf_position, computer_move)
         if new_wolf_position is not None:
             self.get_wolf().set_position(*new_wolf_position)
+            print(f"DEBUG: Nowa pozycja wilka po ruchu gracza: {new_wolf_position}")
 
         new_sheep_positions = [self.calculate_new_position(pos, computer_move) for pos in sheep_positions]
         for i in range(len(self.get_sheep())):
             if new_sheep_positions[i] is not None:
                 self.get_sheep()[i].set_position(*new_sheep_positions[i])
 
-    def calculate_new_position(self, current_position, move):
+    def calculate_new_position(self, current_position, move, sheep_positions=None):
         # Metoda do obliczania nowej pozycji na podstawie aktualnej pozycji i ruchu
-        x, y = current_position
+        row, col = current_position
+        print(f"DEBUG: Obliczanie nowej pozycji. Aktualna pozycja: {current_position}")
         if move == 'DIAGONAL_UP_LEFT':
-            return x - 1, y - 1
+            new_position = row - 1, col - 1
         elif move == 'DIAGONAL_UP_RIGHT':
-            return x - 1, y + 1
+            new_position = row - 1, col + 1
         elif move == 'DIAGONAL_DOWN_LEFT':
-            return x + 1, y - 1
+            new_position = row + 1, col - 1
         elif move == 'DIAGONAL_DOWN_RIGHT':
-            return x + 1, y + 1
+            new_position = row + 1, col + 1
         else:
-            return x, y
+            new_position = row, col
+
+        # Sprawdź, czy nowa pozycja wykracza poza szachownicę
+        if is_position_within_board(new_position):
+            return new_position
+        else:
+            print(f"Nowa pozycja {new_position} wykracza poza szachownicę. Wybieranie nowej pozycji.")
+
+            if self.current_player == self.player and sheep_positions is not None:
+                new_sheep_positions = [self.calculate_new_position(pos, move) for pos in sheep_positions]
+                for i in range(len(self.get_sheep())):
+                    if new_sheep_positions[i] is not None:
+                        self.get_sheep()[i].set_position(*new_sheep_positions[i])
+
+            return self.calculate_new_position(current_position, "RANDOM_MOVE")
 
     def get_move_history(self):
         # Ustaw domyślną rolę, jeśli player_role nie jest ustawiona
@@ -235,8 +237,8 @@ class Game:
         return False, "Gra trwa."
 
     def is_wolf_winner(self):
-        x, y = self.wolf.get_position()
-        wolf_winner = y == 0
+        row, col = self.wolf.get_position()
+        wolf_winner = col == 7
 
         return wolf_winner
 
@@ -246,9 +248,9 @@ class Game:
         return sheep_winner
 
     def is_blocked(self):
-        x, y = self.wolf.get_position()
+        row, col = self.wolf.get_position()
         blocked_condition = all(
-            sheep.get_position() == (x - 1, y) or sheep.get_position() == (x + 1, y)
+            sheep.get_position() == (row - 1, col) or sheep.get_position() == (row + 1, col)
             for sheep in self.sheep)
 
         return blocked_condition

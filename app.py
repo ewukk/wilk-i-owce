@@ -19,6 +19,21 @@ def create_game_instance(session):
     return game_instance
 
 
+# Funkcja do generowania początkowych pozycji pionków
+def generate_initial_positions():
+    # Początkowe pozycje wilka i owiec
+    wolf_position = {"id": "wolf", "row": 0, "col": 0}
+    sheep_positions = [{"id": f"sheep{i}", "row": 7, "col": 2 * i} for i in range(4)]
+
+    # Zwróć listę początkowych pozycji pionków
+    return [wolf_position] + sheep_positions
+
+
+# Przykładowe dane
+data = {
+    "pieces": generate_initial_positions()
+}
+
 @app.before_request
 def make_session_permanent():
     session.permanent = True
@@ -81,6 +96,8 @@ def game():
                 if not is_game_over:
                     # Jeśli gra się nie zakończyła, to przełącz na turę komputera
                     session['current_turn'] = 'computer'
+                    if 'computer_role' not in session:
+                        session['computer_role'] = "owca" if player_role == "wilk" else "wilk"
                     wolf_position = game_instance.get_wolf()
                     sheeps = game_instance.get_sheep()
                     sheep_positions = [sheep.get_position() for sheep in sheeps]
@@ -92,16 +109,24 @@ def game():
     sheep_positions = [sheep.get_position() for sheep in sheeps]
     initialSheepPositions = [sheep.get_position() for sheep in sheeps]
 
-    return render_template('game.html', sheeps=sheeps, wolf=wolf, result=result,
-                           computer_result=computer_result, sheep_positions=sheep_positions,
-                           initialSheepPositions=initialSheepPositions, move_history=game_instance.move_history,
-                           is_game_over=is_game_over, current_turn=session.get('current_turn'))
-
+    if request.method == 'GET':
+        # Jeśli to żądanie GET, zwróć stronę HTML
+        return render_template('game.html', sheeps=sheeps, wolf=wolf, result=result,
+                               computer_result=computer_result, sheep_positions=sheep_positions,
+                               initialSheepPositions=initialSheepPositions,
+                               move_history=game_instance.move_history,
+                               is_game_over=is_game_over, current_turn=session.get('current_turn'))
+    elif request.method == 'POST' and request.is_json:
+        # Jeśli to żądanie POST i zawiera dane w formie JSON, zwróć dane jako JSON
+        return jsonify(data)
+    else:
+        # Jeśli to inne żądanie POST, zwróć odpowiednią odpowiedź (np. 400 Bad Request)
+        return jsonify({"error": "Invalid request"}), 400
 
 
 def handle_game_move():
     try:
-        data = request.get_json()
+        data = json.loads(request.get_data())
         move = data.get('pieceId')
 
         if move == 'USER_MOVE':
@@ -119,21 +144,32 @@ def handle_game_move():
 def handle_player_move(user_move):
     try:
         print("DEBUG: Handling player move")
-        game_instance.play_turn(user_move)
+        wolf_position = game_instance.get_wolf().get_position()
+        sheep_positions = [sheep.get_position() for sheep in game_instance.get_sheep()]
 
+        game_instance.update_positions_based_on_player_move(user_move)
         is_game_over, _ = game_instance.is_game_over()
+
         if not is_game_over:
             game_instance.switch_player()
             print(f"DEBUG: Current turn after player move: {game_instance.current_player.get_role()}")
 
+        else:
+            print("Invalid move. Piece out of bounds.")
+            return jsonify(success=False, error="Invalid move. Piece out of bounds.")
+
+        return jsonify(success=True, move=user_move)
+
     except Exception as e:
-        raise ValueError(f"Error handling player move: {str(e)}")
+        print(f"Error handling player move: {str(e)}")
+        return jsonify(success=False, error=str(e))
 
 
 def handle_computer_move(wolf_position, sheep_positions, computer_role):
     try:
-        computer_move = game_instance.get_computer_move(wolf_position=wolf_position, sheep_positions=sheep_positions,
-                                                        computer_role=computer_role)
+        print("DEBUG: Handling computer move")
+
+        computer_move = game_instance.get_computer_move()
         result = game_instance.play_turn(computer_move)
 
         is_game_over, _ = game_instance.is_game_over()
@@ -142,8 +178,15 @@ def handle_computer_move(wolf_position, sheep_positions, computer_role):
             print(f"DEBUG: Current turn after computer move: {game_instance.current_player.get_role()}")
 
         return jsonify(success=True, result=result)
+
     except Exception as e:
+        print(f"Error handling computer move: {str(e)}")
         return jsonify(success=False, error=str(e))
+
+
+# Funkcja sprawdzająca, czy pozycja pionka jest w zakresie planszy
+def is_position_valid(position):
+    return 0 <= position["row"] < 8 and 0 <= position["col"] < 8
 
 
 if __name__ == '__main__':

@@ -8,16 +8,6 @@ class Player:
     def get_role(self):
         return self.role
 
-    def make_move(self):
-        if self.position is not None:
-            return f"Aktualna pozycja gracza {self.role}: {self.position}"
-        else:
-            return f"{self.role} nie ma jeszcze ustawionej pozycji."
-
-    def set_move(self, new_position=None):
-        if new_position is not None:
-            self.position = new_position
-
     def get_wolf(self):
         return self.wolf
 
