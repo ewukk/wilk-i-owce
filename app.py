@@ -159,10 +159,11 @@ def handle_computer_move_logic(wolf_position, sheep_positions, computer_role, co
 
         # Przekaż wszystkie potrzebne informacje, w tym sheepIndex
         computer_move = get_computer_move(wolf_position, sheep_positions, sheep_index)
+        new_position = computer_move.get('newPosition')
 
         session['current_turn'] = 'player'
 
-        return jsonify(success=True, sheepIndex=sheep_index)
+        return jsonify(success=True, sheepIndex=sheep_index, newPosition=new_position)
     except Exception as e:
         return jsonify(success=False, error=str(e))
 
