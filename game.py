@@ -149,8 +149,8 @@ class Game:
         print(f"DEBUG: Wybrany ruch komputera: {chosen_move}")
         print("DEBUG: Pobierz Ruch Komputera - Koniec")
 
-        # Zwróć bezpośrednio ruch komputera, bez jsonify
-        return chosen_move
+        # Zwróć ruch komputera jako JSON
+        return jsonify({"chosen_move": chosen_move})
 
     def update_positions_based_on_player_move(self, user_move):
         # Pobierz aktualne pozycje owiec i wilka

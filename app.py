@@ -34,6 +34,7 @@ data = {
     "pieces": generate_initial_positions()
 }
 
+
 @app.before_request
 def make_session_permanent():
     session.permanent = True
@@ -101,8 +102,11 @@ def game():
                     wolf_position = game_instance.get_wolf()
                     sheeps = game_instance.get_sheep()
                     sheep_positions = [sheep.get_position() for sheep in sheeps]
-                    handle_computer_move(wolf_position=wolf_position, sheep_positions=sheep_positions,
-                                         computer_role=session['computer_role'])
+
+                    # Pobierz ruch komputera
+                    computer_move = handle_computer_move(wolf_position, sheep_positions, session['computer_role'])
+                    moveSheepWithComputerMove(computer_move)
+                    moveWolfWithComputerMove(computerMove)
 
     sheeps = game_instance.get_sheep()
     wolf = game_instance.get_wolf()
@@ -187,6 +191,8 @@ def handle_computer_move(wolf_position, sheep_positions, computer_role):
 # Funkcja sprawdzająca, czy pozycja pionka jest w zakresie planszy
 def is_position_valid(position):
     return 0 <= position["row"] < 8 and 0 <= position["col"] < 8
+
+
 
 
 if __name__ == '__main__':

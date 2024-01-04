@@ -156,7 +156,7 @@
         function executeComputerMove() {
             const computerMove = {
                 move: 'COMPUTER_MOVE',
-                position: { row: -7, col: -7 }
+                position: { row: 0, col: 0 }
             };
 
             // Pobierz element wilka, który jest przeciągalny
@@ -194,21 +194,128 @@
                 }
                 isUserTurn = true;
                 isMoveExecuted = false; // Zresetuj zmienną po zakończeniu tury komputera
-
+                return response.json();
             })
+                .then(data => {
+                    const computerMove = data.chosen_move;  // Odczytaj ruch komputera z danych
+
+                    // Dla każdego pionka owcy, przesuń go zgodnie z ruchem komputera
+                     moveSheepWithComputerMove(computerMove);
+
+                    // Dla pionka wilka, przesuń go zgodnie z ruchem komputera
+                    moveWolfWithComputerMove(computerMove);
+
+                })
             .catch(error => {
                 console.error('Error during fetch:', error);
             });
         }
 
+        // Funkcja inicjalizująca przeciąganie dla owiec
+        function initializeSheepDraggable() {
+            $(".sheep").draggable({
+                containment: ".board",
+                grid: [50, 50],
+                disabled: false,
+                drag: function (event, ui) {
+                    checkCollisions(ui.helper);
+                    const startPosition = ui.originalPosition;
+                    const endPosition = ui.position;
 
+                    // Sprawdzenie, czy ruch jest na ukos
+                    if (!isDiagonalMovement(startPosition, endPosition)) {
+                        // Jeśli nie, przywróć poprzednią pozycję
+                        $(this).draggable('option', 'revert', true);
+                    } else {
+                        // Sprawdzenie, czy pionek nie cofa się do poprzedniego rzędu
+                        const startRow = Math.floor(startPosition.top / 50);
+                        const endRow = Math.floor(endPosition.top / 50);
+                        if (endRow > startRow) {
+                            // Jeśli pionek cofa się do poprzedniego rzędu, przywróć poprzednią pozycję
+                            $(this).draggable('option', 'revert', true);
+                        } else {
+                            // W przeciwnym razie, usuń opcję revert
+                            $(this).draggable('option', 'revert', false);
+                        }
+                    }
+                },
+                stop: function (event, ui) {
+                    const pieceId = $(this).attr("id");
+                    handlePieceStop(event, ui, pieceId);
+                },
+                drop: function (event, ui) {
+                    const pieceId = $(this).attr("id");
+                    handlePieceDrop(event, ui, pieceId);
+                }
+            });
+        }
+
+        // Funkcja do przesuwania owiec zgodnie z ruchem komputera
+        function moveSheepWithComputerMove(computerMove) {
+            const sheepIndex = computerMove.sheepIndex;  // Ustaw odpowiedni indeks owcy na podstawie ruchu komputera
+            const sheepPiece = $("#sheep" + sheepIndex);
+
+            // Zaktualizuj pozycję owcy na planszy
+            const newPosition = {
+                row: computerMove.newPosition.row,
+                col: computerMove.newPosition.col
+            };
+
+            sheepPiece.data("current-row", newPosition.row);
+            sheepPiece.data("current-col", newPosition.col);
+            updatePieceView(sheepPiece, newPosition);
+        }
+
+        function initializeWolfDraggable() {
+            $("#wolf").draggable({
+                    containment: ".board",
+                    grid: [50, 50],
+                    disabled: false,
+                    drag: function (event, ui) {
+                        checkCollisions(ui.helper);
+                      const startPosition = ui.originalPosition;
+                      const endPosition = ui.position;
+
+                      // Sprawdzenie, czy ruch jest na ukos
+                      if (!isDiagonalMovement(startPosition, endPosition)) {
+                          // Jeśli nie, przywróć poprzednią pozycję
+                          $(this).draggable('option', 'revert', true);
+                      } else {
+                          // W przeciwnym razie, usuń opcję revert
+                          $(this).draggable('option', 'revert', false);
+                      }
+                  },
+                  stop: function (event, ui) {
+                    pieceId = $(this).attr("id");
+                    handlePieceStop(event, ui, pieceId);
+                },
+                drop: function (event, ui) {
+                    const pieceId = $(this).attr("id");
+                    handlePieceDrop(event, ui, pieceId);
+                }
+                });
+        }
+
+        // Funkcja do przesuwania wilka zgodnie z ruchem komputera
+        function moveWolfWithComputerMove(computerMove) {
+            const wolfPiece = $("#wolf");
+
+            // Zaktualizuj pozycję wilka na planszy
+            const newPosition = {
+                row: computerMove.newPosition.row,
+                col: computerMove.newPosition.col
+            };
+
+            wolfPiece.data("current-row", newPosition.row);
+            wolfPiece.data("current-col", newPosition.col);
+            updatePieceView(wolfPiece, newPosition);
+        }
 
          function isDiagonalMovement(startPosition, endPosition) {
             const dx = Math.abs(endPosition.left - startPosition.left);
             const dy = Math.abs(endPosition.top - startPosition.top);
             return dx === dy;
          }
-
 
          function handlePieceDrag(event, ui, movePieceFunction) {
              try {
@@ -260,9 +367,6 @@
             executeComputerMove();
         }
 
-
-
-
         function handlePieceDrop(event, ui, pieceId) {
             if (!isMoveExecuted && isUserTurn) {
                 const currentPosition = {
@@ -278,7 +382,6 @@
                 }
             }
         }
-
 
         function setDraggableProperties() {
             var pieceId = "";
@@ -305,74 +408,12 @@
                 }
             });
 
-
             if (currentPlayerRole === "wilk") {
                 pieceId = "wolf";
-                $("#wolf").draggable({
-                    containment: ".board",
-                    grid: [50, 50],
-                    disabled: false,
-                    drag: function (event, ui) {
-                        checkCollisions(ui.helper);
-                      const startPosition = ui.originalPosition;
-                      const endPosition = ui.position;
-
-                      // Sprawdzenie, czy ruch jest na ukos
-                      if (!isDiagonalMovement(startPosition, endPosition)) {
-                          // Jeśli nie, przywróć poprzednią pozycję
-                          $(this).draggable('option', 'revert', true);
-                      } else {
-                          // W przeciwnym razie, usuń opcję revert
-                          $(this).draggable('option', 'revert', false);
-                      }
-                  },
-                  stop: function (event, ui) {
-                    pieceId = $(this).attr("id");
-                    handlePieceStop(event, ui, pieceId);
-                },
-                drop: function (event, ui) {
-                    const pieceId = $(this).attr("id");
-                    handlePieceDrop(event, ui, pieceId);
-                }
-                });
+                initializeWolfDraggable()
             } else if (currentPlayerRole === "owca") {
                 pieceId = "sheep";
-                $(".sheep").draggable({
-                    containment: ".board",
-                    grid: [50, 50],
-                    disabled: false,
-                    drag: function (event, ui) {
-                        checkCollisions(ui.helper);
-                      const startPosition = ui.originalPosition;
-                      const endPosition = ui.position;
-
-                      // Sprawdzenie, czy ruch jest na ukos
-                      if (!isDiagonalMovement(startPosition, endPosition)) {
-                          // Jeśli nie, przywróć poprzednią pozycję
-                          $(this).draggable('option', 'revert', true);
-                      } else {
-                          // Sprawdzenie, czy pionek nie cofa się do poprzedniego rzędu
-                          const startRow = Math.floor(startPosition.top / 50);
-                          const endRow = Math.floor(endPosition.top / 50);
-                          if (endRow > startRow) {
-                              // Jeśli pionek cofa się do poprzedniego rzędu, przywróć poprzednią pozycję
-                              $(this).draggable('option', 'revert', true);
-                          } else {
-                              // W przeciwnym razie, usuń opcję revert
-                              $(this).draggable('option', 'revert', false);
-                          }
-                      }
-
-                    },
-                    stop: function (event, ui) {
-                        pieceId = $(this).attr("id");
-                        handlePieceStop(event, ui, pieceId);
-                     },
-                    drop: function (event, ui) {
-                        const pieceId = $(this).attr("id");
-                        handlePieceDrop(event, ui, pieceId);
-                    }
-                });
+                initializeSheepDraggable()
             }
         }
 
