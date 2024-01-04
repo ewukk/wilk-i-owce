@@ -9,3 +9,4 @@ class Sheep:
     def set_position(self, row, col):
         self.row = row
         self.col = col
+

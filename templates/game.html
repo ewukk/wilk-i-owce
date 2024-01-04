@@ -62,6 +62,7 @@
     <script>
         // Store initial positions of sheeps
         const initialSheepPositions = {{ sheep_positions | tojson | safe }};
+        var currentPlayerRole = "{{ session.get('player_role') }}";
 
     </script>
 
@@ -88,7 +89,7 @@
                     {% if row == 7 and col % 2 == 0 %}
                         {% set sheep_index = col // 2 %}
                         <!-- Pionki owiec tylko co drugą komórkę w ostatnim rzędzie -->
-                        <div class="piece sheep" id="sheep{{ sheep_index }}" data-piece-type="sheep" style="cursor: pointer;"
+                        <div class="piece sheep" id="sheep{{ sheep_index }}" data-index="{{ sheep_index }}" data-piece-type="sheep" style="cursor: pointer;"
                              data-initial-row="{{ initialSheepPositions[sheep_index][0] }}" data-initial-col="{{ initialSheepPositions[sheep_index][1] }}"
                              data-current-row="{{ initialSheepPositions[sheep_index][0] }}" data-current-col="{{ initialSheepPositions[sheep_index][1] }}"
                              onstop="handlePieceStop(event, ui, 'sheep{{ sheep_index }}')">
@@ -107,7 +108,7 @@
 
     <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
     <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
-    <script src="./game.js"></script>
+    <script src="../static/game.js"></script>
 
 </body>
 </html>

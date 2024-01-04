@@ -1,11 +1,11 @@
-var currentPlayerRole = "{{ session.get('player_role') }}";
-console.log('Current Player Role:', currentPlayerRole);
-var isUserTurn = true;
-var userMoveCompleted = false;
-var isMoveExecuted = false;
+console.log("[Log] Current Player Role: " + currentPlayerRole);
+let isUserTurn = true;
+let userMoveCompleted = false;
+let isMoveExecuted = false;
+let pieceId;
 
 async function executeMove(pieceId, currentPosition) {
-    var userMove = {
+    let userMove = {
         move: 'USER_MOVE',
         pieceId: pieceId,
         position: currentPosition
@@ -41,14 +41,21 @@ async function executeMove(pieceId, currentPosition) {
 function executeComputerMove() {
     const computerMove = {
         move: 'COMPUTER_MOVE',
-        position: { row: 0, col: 0 }
+        position: { row: 0, col: 0 },
+        pieceId: pieceId
     };
+
+    let sheepIndex = $(`#${pieceId}`).data('index');
 
     // Pobierz element wilka, który jest przeciągalny
     const draggableWolf = $("#wolf.ui-draggable");
 
     // Pobierz wszystkie elementy .sheep, które są przeciągalne
     const draggableSheep = $(".sheep.ui-draggable");
+
+    if (draggableSheep.length > 0) {
+        sheepIndex = draggableSheep.attr("id");
+    }
 
     // Sprawdź, czy elementy są już zainicjowane jako przeciągalne
     if (draggableWolf.length > 0) {
@@ -63,7 +70,7 @@ function executeComputerMove() {
         headers: {
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify(computerMove),
+        body: JSON.stringify({ computerMove }),
         credentials: 'same-origin',
     })
         .then(response => {
@@ -83,9 +90,10 @@ function executeComputerMove() {
         })
         .then(data => {
             const computerMove = data.chosen_move;  // Odczytaj ruch komputera z danych
+            const sheepIndex = data.sheepIndex;
 
             // Dla każdego pionka owcy, przesuń go zgodnie z ruchem komputera
-            moveSheepWithComputerMove(computerMove);
+            moveSheepWithComputerMove(computerMove, sheepIndex);
 
             // Dla pionka wilka, przesuń go zgodnie z ruchem komputera
             moveWolfWithComputerMove(computerMove);
@@ -95,6 +103,45 @@ function executeComputerMove() {
             console.error('Error during fetch:', error);
         });
 }
+
+// Funkcja do przesuwania owiec zgodnie z ruchem komputera
+function moveSheepWithComputerMove(computerMove, sheepIndex) {
+    const sheepPiece = $("#sheep" + sheepIndex);
+
+    if (sheepPiece && computerMove && computerMove.newPosition) {
+        // Zaktualizuj pozycję owcy na planszy
+        const newPosition = {
+            row: computerMove.newPosition.row,
+            col: computerMove.newPosition.col
+        };
+
+        sheepPiece.data("current-row", newPosition.row);
+        sheepPiece.data("current-col", newPosition.col);
+        updatePieceView(sheepPiece, newPosition);
+    } else {
+        console.error('Invalid computerMove object or newPosition not found:', computerMove);
+    }
+}
+
+// Funkcja do przesuwania wilka zgodnie z ruchem komputera
+function moveWolfWithComputerMove(computerMove) {
+    const wolfPiece = $("#wolf");
+
+    if (wolfPiece && computerMove && computerMove.newPosition) {
+        // Zaktualizuj pozycję wilka na planszy
+        const newPosition = {
+            row: computerMove.newPosition.row,
+            col: computerMove.newPosition.col
+        };
+
+        wolfPiece.data("current-row", newPosition.row);
+        wolfPiece.data("current-col", newPosition.col);
+        updatePieceView(wolfPiece, newPosition);
+    } else {
+        console.error('Invalid computerMove object or newPosition not found:', computerMove);
+    }
+}
+
 
 // Funkcja inicjalizująca przeciąganie dla owiec
 function initializeSheepDraggable() {
@@ -126,29 +173,15 @@ function initializeSheepDraggable() {
             },
         stop: function (event, ui) {
             const pieceId = $(this).attr("id");
+            const sheepIndex = $(this).data('index');
             handlePieceStop(event, ui, pieceId);
             },
         drop: function (event, ui) {
             const pieceId = $(this).attr("id");
+            const sheepIndex = $(this).data('index');
             handlePieceDrop(event, ui, pieceId);
         }
     });
-}
-
-// Funkcja do przesuwania owiec zgodnie z ruchem komputera
-function moveSheepWithComputerMove(computerMove) {
-    const sheepIndex = computerMove.sheepIndex;  // Ustaw odpowiedni indeks owcy na podstawie ruchu komputera
-    const sheepPiece = $("#sheep" + sheepIndex);
-
-    // Zaktualizuj pozycję owcy na planszy
-    const newPosition = {
-        row: computerMove.newPosition.row,
-        col: computerMove.newPosition.col
-    };
-
-    sheepPiece.data("current-row", newPosition.row);
-    sheepPiece.data("current-col", newPosition.col);
-    updatePieceView(sheepPiece, newPosition);
 }
 
 function initializeWolfDraggable() {
@@ -171,7 +204,7 @@ function initializeWolfDraggable() {
             }
             },
         stop: function (event, ui) {
-            pieceId = $(this).attr("id");
+            let pieceId = $(this).attr("id");
             handlePieceStop(event, ui, pieceId);
             },
         drop: function (event, ui) {
@@ -181,19 +214,20 @@ function initializeWolfDraggable() {
     });
 }
 
-// Funkcja do przesuwania wilka zgodnie z ruchem komputera
-function moveWolfWithComputerMove(computerMove) {
-    const wolfPiece = $("#wolf");
-
-    // Zaktualizuj pozycję wilka na planszy
-    const newPosition = {
-        row: computerMove.newPosition.row,
-        col: computerMove.newPosition.col
-    };
-
-    wolfPiece.data("current-row", newPosition.row);
-    wolfPiece.data("current-col", newPosition.col);
-    updatePieceView(wolfPiece, newPosition);
+// Funkcja do przesyłania ruchu komputera do serwera
+function sendComputerMove(computerMove) {
+    $.ajax({
+        type: "POST",
+        contentType: "application/json;charset=utf-8",
+        url: "/handle_computer_move",
+        data: JSON.stringify({ "computerMove": computerMove }),
+        success: function(response) {
+            console.log("Odpowiedź serwera:", response);
+        },
+        error: function(error) {
+            console.error("Błąd przy wysyłaniu danych do serwera:", error);
+        }
+    });
 }
 
 function isDiagonalMovement(startPosition, endPosition) {
@@ -269,10 +303,10 @@ function handlePieceDrop(event, ui, pieceId) {
 }
 
 function setDraggableProperties() {
-    var pieceId = "";
+    let pieceId = "";
 
     $(".piece").on("stop", function(event) {
-        var ui = event.ui;
+        let ui = event.ui;
         pieceId = $(this).attr("id");
 
         // Upewnij się, że pieceId nie jest undefined przed wywołaniem startsWith
@@ -309,7 +343,7 @@ function checkCollisions(movingPiece) {
     };
 
     if (hasCollisions(movingPiece, currentPosition)) {
-                ovingPiece.draggable('option', 'revert', true);
+                movingPiece.draggable('option', 'revert', true);
     }
 }
 
