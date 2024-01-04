@@ -1,3 +1,5 @@
+import random
+
 from flask import Flask, render_template, request, session, redirect, json, jsonify
 from Players.ComputerPlayer import ComputerPlayer
 from game import create_player, create_game_instance, Game
@@ -106,7 +108,7 @@ def game():
                     # Pobierz ruch komputera
                     computer_move = handle_computer_move(wolf_position, sheep_positions, session['computer_role'])
                     moveSheepWithComputerMove(computer_move)
-                    moveWolfWithComputerMove(computerMove)
+                    moveWolfWithComputerMove(computer_move)
 
     sheeps = game_instance.get_sheep()
     wolf = game_instance.get_wolf()
@@ -193,6 +195,44 @@ def is_position_valid(position):
     return 0 <= position["row"] < 8 and 0 <= position["col"] < 8
 
 
+def get_computer_move(self):
+    global move_mapping
+    print("DEBUG: Pobierz Ruch Komputera - Start")
+    print(f"Komputer widzi grę jako {self.computer_player.get_role()}")
+    computer_role = self.computer_player.get_role()
+    wolf_position = self.wolf.get_position()
+    sheep_positions = [sheep.get_position() for sheep in self.get_sheep()]
+
+    # Sprawdź rolę komputera
+    if computer_role == "wilk":
+        possible_moves = self.calculate_new_position(wolf_position, sheep_positions)
+        # Dostosuj format ruchu do oczekiwanego formatu w grze
+        move_mapping = {
+            "DIAGONAL_UP_LEFT": "DIAGONAL_UP_LEFT",
+            "DIAGONAL_UP_RIGHT": "DIAGONAL_UP_RIGHT",
+            "DIAGONAL_DOWN_LEFT": "DIAGONAL_DOWN_LEFT",
+            "DIAGONAL_DOWN_RIGHT": "DIAGONAL_DOWN_RIGHT",
+        }
+    elif computer_role == "owca":
+        # Wybierz losową owcę
+        chosen_sheep = random.choice(self.get_sheep())
+        # Oblicz ruch na podstawie pozycji wybranej owcy
+        chosen_move = self.calculate_new_position(self.wolf.get_position(), chosen_sheep.get_position())
+        possible_moves = [chosen_move]
+        # Dostosuj format ruchu do oczekiwanego formatu w grze
+        move_mapping = {
+            "DIAGONAL_UP_LEFT": "DIAGONAL_UP_LEFT",
+            "DIAGONAL_UP_RIGHT": "DIAGONAL_UP_RIGHT",
+        }
+
+    # Wybierz jeden ruch z move_mapping, nawet jeśli brak dostępnych ruchów
+    chosen_move = random.choice(list(move_mapping.values()))
+
+    print(f"DEBUG: Wybrany ruch komputera: {chosen_move}")
+    print("DEBUG: Pobierz Ruch Komputera - Koniec")
+
+    # Zwróć ruch komputera jako JSON
+    return jsonify({"chosen_move": chosen_move})
 
 
 if __name__ == '__main__':

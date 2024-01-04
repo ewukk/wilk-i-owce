@@ -113,45 +113,6 @@ class Game:
 
         return result
 
-    def get_computer_move(self):
-        global move_mapping
-        print("DEBUG: Pobierz Ruch Komputera - Start")
-        print(f"Komputer widzi grę jako {self.computer_player.get_role()}")
-        computer_role = self.computer_player.get_role()
-        wolf_position = self.wolf.get_position()
-        sheep_positions = [sheep.get_position() for sheep in self.get_sheep()]
-
-        # Sprawdź rolę komputera
-        if computer_role == "wilk":
-            possible_moves = self.calculate_new_position(wolf_position, sheep_positions)
-            # Dostosuj format ruchu do oczekiwanego formatu w grze
-            move_mapping = {
-                "DIAGONAL_UP_LEFT": "DIAGONAL_UP_LEFT",
-                "DIAGONAL_UP_RIGHT": "DIAGONAL_UP_RIGHT",
-                "DIAGONAL_DOWN_LEFT": "DIAGONAL_DOWN_LEFT",
-                "DIAGONAL_DOWN_RIGHT": "DIAGONAL_DOWN_RIGHT",
-            }
-        elif computer_role == "owca":
-            # Wybierz losową owcę
-            chosen_sheep = random.choice(self.get_sheep())
-            # Oblicz ruch na podstawie pozycji wybranej owcy
-            chosen_move = self.calculate_new_position(self.wolf.get_position(), chosen_sheep.get_position())
-            possible_moves = [chosen_move]
-            # Dostosuj format ruchu do oczekiwanego formatu w grze
-            move_mapping = {
-                "DIAGONAL_UP_LEFT": "DIAGONAL_UP_LEFT",
-                "DIAGONAL_UP_RIGHT": "DIAGONAL_UP_RIGHT",
-            }
-
-        # Wybierz jeden ruch z move_mapping, nawet jeśli brak dostępnych ruchów
-        chosen_move = random.choice(list(move_mapping.values()))
-
-        print(f"DEBUG: Wybrany ruch komputera: {chosen_move}")
-        print("DEBUG: Pobierz Ruch Komputera - Koniec")
-
-        # Zwróć ruch komputera jako JSON
-        return jsonify({"chosen_move": chosen_move})
-
     def update_positions_based_on_player_move(self, user_move):
         # Pobierz aktualne pozycje owiec i wilka
         wolf_position = self.get_wolf().get_position()
