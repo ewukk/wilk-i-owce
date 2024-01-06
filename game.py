@@ -36,8 +36,8 @@ class Game:
         self.player_role = None
         self.user_move_completed = False
         self.move_history = {"owca": [], "wilk": []}
-        self.wolf = Wolf(350, 50)
-        self.sheep = [Sheep(50 * i, 350) for i in range(1, 8, 2)]
+        self.wolf = Wolf(0, 0)
+        self.sheep = [Sheep(2 * i, 7) for i in range(1, 8, 2)]
 
     def get_wolf(self):
         return self.wolf

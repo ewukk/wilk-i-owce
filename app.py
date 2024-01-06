@@ -32,7 +32,6 @@ def generate_initial_positions():
     return [wolf_position] + sheep_positions
 
 
-# Przykładowe dane
 data = {
     "pieces": generate_initial_positions()
 }
@@ -132,9 +131,6 @@ def game():
 @app.route('/handle_computer_move', methods=['POST'])
 def handle_computer_move():
     try:
-        data = request.json  # Dane przesyłane przez klienta (np. ruch komputera)
-        computer_move = data.get('computerMove')
-
         # Pobierz pozycję wilka i owiec oraz rolę komputera
         wolf_position = game_instance.get_wolf().get_position()
         sheeps = game_instance.get_sheep()
@@ -142,28 +138,31 @@ def handle_computer_move():
         computer_role = session.get('computer_role')
 
         # Przekaż te informacje do funkcji obsługującej ruch komputera
-        handle_computer_move_logic(wolf_position, sheep_positions, computer_role, computer_move)
+        handle_computer_move_logic(wolf_position, sheep_positions, computer_role)
 
         return jsonify({"success": True})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)})
 
 
-def handle_computer_move_logic(wolf_position, sheep_positions, computer_role, computer_move):
+def handle_computer_move_logic(wolf_position, sheep_positions, computer_role):
     try:
-        # Pobierz sheepIndex z obiektu computer_move
-        sheep_index = computer_move.get('sheepIndex')
+        sheeps = game_instance.get_sheep()
 
-        wolf_position = game_instance.get_wolf().get_position()
-        sheep_positions = [sheep.get_position() for sheep in game_instance.get_sheep()]
+        # Przekaż wszystkie potrzebne informacje
+        computer_move = get_computer_move(wolf_position, sheep_positions)
+        new_position = computer_move
 
-        # Przekaż wszystkie potrzebne informacje, w tym sheepIndex
-        computer_move = get_computer_move(wolf_position, sheep_positions, sheep_index)
-        new_position = computer_move.get('newPosition')
+        # Zaktualizuj current_position na nową pozycję
+        if computer_role == "wilk":
+            game_instance.get_wolf().set_position(new_position)
+        else:
+            chosen_sheep = sheeps[computer_move.get('sheepIndex')]
+            chosen_sheep.set_position(new_position)
 
         session['current_turn'] = 'player'
 
-        return jsonify(success=True, sheepIndex=sheep_index, newPosition=new_position)
+        return jsonify(success=True, current_position=new_position)
     except Exception as e:
         return jsonify(success=False, error=str(e))
 
@@ -186,10 +185,7 @@ def handle_game_move():
 def handle_player_move(user_move):
     try:
         print("DEBUG: Handling player move")
-        wolf_position = game_instance.get_wolf().get_position()
-        sheep_positions = [sheep.get_position() for sheep in game_instance.get_sheep()]
 
-        game_instance.update_positions_based_on_player_move(user_move)
         is_game_over, _ = game_instance.is_game_over()
 
         if not is_game_over:
@@ -212,79 +208,54 @@ def is_position_valid(position):
     return 0 <= position["row"] < 8 and 0 <= position["col"] < 8
 
 
-def get_computer_move(wolf_position, sheep_positions, sheep_index):
+def get_computer_move(wolf_position, sheep_positions):
     global move_mapping
     print("DEBUG: Pobierz Ruch Komputera - Start")
 
     computer_role = session.get('computer_role')
-    new_position = None
+    current_position = session.get('current_position')
 
     # Sprawdź rolę komputera
     if computer_role == "wilk":
-        possible_moves = calculate_new_position(wolf_position, sheep_positions)
-        # Dostosuj format ruchu do oczekiwanego formatu w grze
         move_mapping = {
             "DIAGONAL_UP_LEFT": "DIAGONAL_UP_LEFT",
             "DIAGONAL_UP_RIGHT": "DIAGONAL_UP_RIGHT",
             "DIAGONAL_DOWN_LEFT": "DIAGONAL_DOWN_LEFT",
             "DIAGONAL_DOWN_RIGHT": "DIAGONAL_DOWN_RIGHT",
         }
+        current_position = wolf_position
+        # Wybierz jeden ruch
+        chosen_move = random.choice(list(move_mapping.values()))
+        new_position = calculate_new_position(current_position, chosen_move)
+
+        print(f"DEBUG: Wybrany ruch komputera: {chosen_move}")
+        print(f"DEBUG: Nowa pozycja pionka: {new_position}")
+        print("DEBUG: Pobierz Ruch Komputera - Koniec")
+
+        return new_position
+
     elif computer_role == "owca":
-        # Wybierz losową owcę
-        chosen_sheep = random.choice(game_instance.get_sheep())
-        # Oblicz ruch na podstawie pozycji wybranej owcy
-        new_position = calculate_new_position(wolf_position, chosen_sheep.get_position())
-        possible_moves = [new_position]
-        # Dostosuj format ruchu do oczekiwanego formatu w grze
         move_mapping = {
             "DIAGONAL_UP_LEFT": "DIAGONAL_UP_LEFT",
             "DIAGONAL_UP_RIGHT": "DIAGONAL_UP_RIGHT",
         }
+        # Wybierz losową owcę
+        chosen_sheep = random.choice(game_instance.get_sheep())
+        current_position = sheep_positions[chosen_sheep]
+        sheepIndex = chosen_sheep.get_index()
+        # Wybierz jeden ruch
+        chosen_move = random.choice(list(move_mapping.values()))
+        # Oblicz ruch na podstawie pozycji wybranej owcy
+        new_position = calculate_new_position(current_position, chosen_move)
 
-    # Wybierz jeden ruch z move_mapping, nawet jeśli brak dostępnych ruchów
-    chosen_move = random.choice(list(move_mapping.values()))
+        print(f"DEBUG: Wybrany ruch komputera: {chosen_move}")
+        print(f"DEBUG: Nowa pozycja pionka: {new_position}")
+        print("DEBUG: Pobierz Ruch Komputera - Koniec")
 
-    print(f"DEBUG: Wybrany ruch komputera: {chosen_move}")
-    print("DEBUG: Pobierz Ruch Komputera - Koniec")
-
-    # Zwróć ruch komputera
-    return {"chosen_move": chosen_move, "newPosition": new_position}
-
-
-def update_positions_based_on_player_move(game_instance, user_move):
-    # Pobierz aktualne pozycje owiec i wilka
-    wolf_position = game_instance.get_wolf().get_position()
-    sheep_positions = [sheep.get_position() for sheep in game_instance.get_sheep()]
-
-    # Zaktualizuj pozycje w zależności od ruchu gracza
-    new_wolf_position = calculate_new_position(wolf_position, user_move)
-    if new_wolf_position is not None:
-        game_instance.get_wolf().set_position(*new_wolf_position)
-
-    new_sheep_positions = [calculate_new_position(pos, user_move) for pos in sheep_positions]
-    for i in range(len(game_instance.get_sheep())):
-        if new_sheep_positions[i] is not None:
-            game_instance.get_sheep()[i].set_position(*new_sheep_positions[i])
+        return new_position
 
 
-def update_positions_based_on_computer_move(game_instance, computer_move):
-    # Pobierz aktualne pozycje owiec i wilka
-    wolf_position = game_instance.get_wolf().get_position()
-    sheep_positions = [sheep.get_position() for sheep in game_instance.get_sheep()]
-
-    # Zaktualizuj pozycje w zależności od ruchu komputera
-    new_wolf_position = calculate_new_position(wolf_position, computer_move)
-    if new_wolf_position is not None:
-        game_instance.get_wolf().set_position(*new_wolf_position)
-        print(f"DEBUG: Nowa pozycja wilka po ruchu gracza: {new_wolf_position}")
-
-    new_sheep_positions = [calculate_new_position(pos, computer_move) for pos in sheep_positions]
-    for i in range(len(game_instance.get_sheep())):
-        if new_sheep_positions[i] is not None:
-            game_instance.get_sheep()[i].set_position(*new_sheep_positions[i])
-
-
-def calculate_new_position(current_position, move, sheep_positions=None):
+def calculate_new_position(current_position, move):
     # Metoda do obliczania nowej pozycji na podstawie aktualnej pozycji i ruchu
     row, col = current_position
     print(f"DEBUG: Obliczanie nowej pozycji. Aktualna pozycja: {current_position}")
@@ -305,14 +276,7 @@ def calculate_new_position(current_position, move, sheep_positions=None):
     else:
         print(f"Nowa pozycja {new_position} wykracza poza szachownicę. Wybieranie nowej pozycji.")
 
-        if sheep_positions is not None:
-            new_sheep_positions = [calculate_new_position(pos, move) for pos in sheep_positions]
-            for i in range(len(new_sheep_positions)):
-                if new_sheep_positions[i] is not None:
-                    return new_sheep_positions[i]
-
         return calculate_new_position(current_position, "RANDOM_MOVE")
-
 
 
 if __name__ == '__main__':

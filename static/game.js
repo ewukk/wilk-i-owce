@@ -275,7 +275,7 @@ function handlePieceStop(event, ui, pieceId) {
     };
 
     if (!userMoveCompleted && isUserTurn) {
-        executeMove(pieceId, currentPosition); // Opóźnienie o 500 ms (przykładowe wartości)
+        executeMove(pieceId, currentPosition);
         isMoveExecuted = true;
     }
 }
@@ -375,6 +375,7 @@ function hasSheepCollisions(movingPiece, newPosition) {
 
     return hasCollision || newPositionOccupied;
 }
+
 
 
 function isCollisionWithWolf(movingPiece, newPosition) {
