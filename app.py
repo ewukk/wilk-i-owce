@@ -220,7 +220,7 @@ def get_computer_move(wolf_position, sheep_positions):
         current_position = game_instance.get_wolf().get_position()
         # Wybierz jeden ruch
         chosen_move = random.choice(list(move_mapping.values()))
-        new_position = calculate_new_position(current_position, chosen_move)
+        new_position = calculate_new_position(current_position, chosen_move, computer_role)
 
         print(f"DEBUG: Wybrany ruch komputera: {chosen_move}")
         print(f"DEBUG: Nowa pozycja pionka: {new_position}")
