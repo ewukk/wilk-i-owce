@@ -37,7 +37,7 @@ class Game:
         self.user_move_completed = False
         self.move_history = {"owca": [], "wilk": []}
         self.wolf = Wolf(0, 0)
-        self.sheep = [Sheep(2 * i, 7) for i in range(1, 8, 2)]
+        self.sheep = [Sheep(2 * i, 7, j) for i in range(1, 8, 2) for j in range(4)]
 
     def get_wolf(self):
         return self.wolf

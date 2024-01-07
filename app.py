@@ -203,17 +203,11 @@ def handle_player_move(user_move):
         return jsonify(success=False, error=str(e))
 
 
-# Funkcja sprawdzająca, czy pozycja pionka jest w zakresie planszy
-def is_position_valid(position):
-    return 0 <= position["row"] < 8 and 0 <= position["col"] < 8
-
-
 def get_computer_move(wolf_position, sheep_positions):
     global move_mapping
     print("DEBUG: Pobierz Ruch Komputera - Start")
 
     computer_role = session.get('computer_role')
-    current_position = session.get('current_position')
 
     # Sprawdź rolę komputera
     if computer_role == "wilk":
@@ -223,7 +217,7 @@ def get_computer_move(wolf_position, sheep_positions):
             "DIAGONAL_DOWN_LEFT": "DIAGONAL_DOWN_LEFT",
             "DIAGONAL_DOWN_RIGHT": "DIAGONAL_DOWN_RIGHT",
         }
-        current_position = wolf_position
+        current_position = game_instance.get_wolf().get_position()
         # Wybierz jeden ruch
         chosen_move = random.choice(list(move_mapping.values()))
         new_position = calculate_new_position(current_position, chosen_move)
@@ -241,33 +235,50 @@ def get_computer_move(wolf_position, sheep_positions):
         }
         # Wybierz losową owcę
         chosen_sheep = random.choice(game_instance.get_sheep())
-        current_position = sheep_positions[chosen_sheep]
         sheepIndex = chosen_sheep.get_index()
+        current_position = chosen_sheep.get_position()
+        print(f"DEBUG: Wybrana owca: {sheepIndex}")
+
         # Wybierz jeden ruch
         chosen_move = random.choice(list(move_mapping.values()))
-        # Oblicz ruch na podstawie pozycji wybranej owcy
-        new_position = calculate_new_position(current_position, chosen_move)
-
         print(f"DEBUG: Wybrany ruch komputera: {chosen_move}")
+
+        # Oblicz ruch na podstawie pozycji wybranej owcy
+        new_position = calculate_new_position(current_position, chosen_move, computer_role)
         print(f"DEBUG: Nowa pozycja pionka: {new_position}")
+
         print("DEBUG: Pobierz Ruch Komputera - Koniec")
 
         return new_position
 
 
-def calculate_new_position(current_position, move):
-    # Metoda do obliczania nowej pozycji na podstawie aktualnej pozycji i ruchu
+def calculate_new_position(current_position, move, role):
+    # Metoda do obliczania nowej pozycji na podstawie aktualnej pozycji, ruchu i roli
     row, col = current_position
     print(f"DEBUG: Obliczanie nowej pozycji. Aktualna pozycja: {current_position}")
-    if move == 'DIAGONAL_UP_LEFT':
-        new_position = row - 1, col - 1
-    elif move == 'DIAGONAL_UP_RIGHT':
-        new_position = row - 1, col + 1
-    elif move == 'DIAGONAL_DOWN_LEFT':
-        new_position = row + 1, col - 1
-    elif move == 'DIAGONAL_DOWN_RIGHT':
-        new_position = row + 1, col + 1
+
+    if role == 'wilk':
+        # Logika dla ruchu wilka
+        if move == 'DIAGONAL_UP_LEFT':
+            new_position = row - 1, col - 1
+        elif move == 'DIAGONAL_UP_RIGHT':
+            new_position = row - 1, col + 1
+        elif move == 'DIAGONAL_DOWN_LEFT':
+            new_position = row + 1, col - 1
+        elif move == 'DIAGONAL_DOWN_RIGHT':
+            new_position = row + 1, col + 1
+        else:
+            new_position = row, col
+    elif role == 'owca':
+        # Logika dla ruchu owcy
+        if move == 'DIAGONAL_UP_LEFT':
+            new_position = row - 1, col - 1
+        elif move == 'DIAGONAL_UP_RIGHT':
+            new_position = row - 1, col + 1
+        else:
+            new_position = row, col
     else:
+        # Logika dla innej roli (możesz dostosować do własnych potrzeb)
         new_position = row, col
 
     # Sprawdź, czy nowa pozycja wykracza poza szachownicę
@@ -276,7 +287,8 @@ def calculate_new_position(current_position, move):
     else:
         print(f"Nowa pozycja {new_position} wykracza poza szachownicę. Wybieranie nowej pozycji.")
 
-        return calculate_new_position(current_position, "RANDOM_MOVE")
+        return calculate_new_position(current_position, "RANDOM_MOVE", role)
+
 
 
 if __name__ == '__main__':
