@@ -16,7 +16,7 @@
             width: 50px; /* Szerokość komórki planszy w pikselach */
             height: 50px; /* Wysokość komórki planszy w pikselach */
             border: 1px solid black;
-            position: relative; /* Dodaj pozycję względną, aby pionki były pozycjonowane wewnątrz komórki */
+            position: relative; /* aby pionki były pozycjonowane wewnątrz komórki */
         }
 
         .white {
@@ -60,10 +60,8 @@
     </style>
 
     <script>
-        // Store initial positions of sheeps
         const initialSheepPositions = {{ sheep_positions | tojson | safe }};
         var currentPlayerRole = "{{ session.get('player_role') }}";
-
     </script>
 
 </head>
@@ -75,6 +73,9 @@
     {% block content %}
     <h1>Grajmy!</h1>
     <p>Teraz tura: {{ current_turn }}</p>
+
+        {{ wolf }}
+
 
     <div class="board">
         {% for row in range(8) %}

@@ -10,5 +10,6 @@ class Wolf:
         self.row = row
         self.col = col
 
-
+    def __repr__(self):
+        return f"Wolf({self.row}, {self.col})"
 

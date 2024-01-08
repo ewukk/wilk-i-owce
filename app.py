@@ -106,10 +106,12 @@ def game():
                     sheep_positions = [sheep.get_position() for sheep in sheeps]
 
                     # Pobierz ruch komputera
+                    print('/////')
                     handle_computer_move()
 
-    sheeps = game_instance.get_sheep()
-    wolf = game_instance.get_wolf()
+    sheeps = game_instance.sheep
+    wolf = game_instance.wolf
+    print('=========', game_instance.wolf)
     sheep_positions = [sheep.get_position() for sheep in sheeps]
     initialSheepPositions = [sheep.get_position() for sheep in sheeps]
 
@@ -136,11 +138,12 @@ def handle_computer_move():
         sheeps = game_instance.get_sheep()
         sheep_positions = [sheep.get_position() for sheep in sheeps]
         computer_role = session.get('computer_role')
-
+        print('=====')
         # Przekaż te informacje do funkcji obsługującej ruch komputera
-        handle_computer_move_logic(wolf_position, sheep_positions, computer_role)
+        new_position = handle_computer_move_logic(wolf_position, sheep_positions, computer_role)
+        print('===========')
 
-        return jsonify({"success": True})
+        return jsonify({"success": True, "newPosition": new_position})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)})
 
@@ -148,17 +151,25 @@ def handle_computer_move():
 def handle_computer_move_logic(wolf_position, sheep_positions, computer_role):
     try:
         sheeps = game_instance.get_sheep()
-
+        print('111111')
         # Przekaż wszystkie potrzebne informacje
         computer_move = get_computer_move(wolf_position, sheep_positions)
+
+        print('33333')
         new_position = computer_move
 
         # Zaktualizuj current_position na nową pozycję
         if computer_role == "wilk":
-            game_instance.get_wolf().set_position(new_position)
+            new_position = (2,3)
+            game_instance.wolf.set_position(*new_position)
+            print('666')
+            print('*****', game_instance.wolf)
         else:
+            print('----')
             chosen_sheep = sheeps[computer_move.get('sheepIndex')]
-            chosen_sheep.set_position(new_position)
+            chosen_sheep.set_position(*new_position)
+
+        print('22222')
 
         session['current_turn'] = 'player'
 
@@ -290,6 +301,5 @@ def calculate_new_position(current_position, move, role):
         return calculate_new_position(current_position, "RANDOM_MOVE", role)
 
 
-
 if __name__ == '__main__':
-    app.run()
+    app.run(debug=True)
